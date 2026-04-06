@@ -1,10 +1,10 @@
 # Lighthouse Database Handoff
 
-This document explains how the SQLite database was built from `lighthouse_csv_v7`, how it is structured, and how teammates (or other AI agents) should use it safely.
+This document explains how the SQLite database was built from `notebooks/lighthouse_csv_v7`, how it is structured, and how teammates (or other AI agents) should use it safely.
 
 ## What This Produces
 
-- Input folder: `lighthouse_csv_v7`
+- Input folder: `notebooks/lighthouse_csv_v7`
 - Build script: `build_lighthouse_sqlite.py`
 - Output database: `lighthouse_v7.sqlite`
 
@@ -103,7 +103,7 @@ This balances speed and correctness.
 From project root:
 
 ```powershell
-python ".\build_lighthouse_sqlite.py" --csv-dir ".\lighthouse_csv_v7" --out ".\lighthouse_v7.sqlite"
+python ".\build_lighthouse_sqlite.py" --csv-dir ".\notebooks\lighthouse_csv_v7" --out ".\lighthouse_v7.sqlite"
 ```
 
 ## Validation Commands
