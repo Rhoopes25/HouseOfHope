@@ -185,7 +185,17 @@ export default function ResidentDetail() {
                     <p className="text-foreground leading-relaxed">{s.narrative}</p>
                     <div><span className="text-muted-foreground">Interventions:</span> {s.interventions}</div>
                     <div><span className="text-muted-foreground">Follow-up:</span> {s.followUpActions}</div>
-                  </CardContent>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {s.progressNoted && (
+                          <Badge className="bg-green-100 text-green-800 border-green-300">Progress Noted</Badge>
+                      )}
+                      {s.concernsFlagged && (
+                          <Badge className="bg-red-100 text-red-800 border-red-300">Concerns Flagged</Badge>
+                      )}
+                      {s.referralMade && (
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-300">Referral Made</Badge>
+                      )}
+                    </div>                  </CardContent>
                 </Card>
               ))}
               <PaginationControl totalItems={sessions.length} pageSize={sessionPagination.pageSize} currentPage={sessionPagination.currentPage} onPageChange={sessionPagination.setCurrentPage} />
@@ -204,7 +214,13 @@ export default function ResidentDetail() {
                     <div><span className="text-muted-foreground">Family present:</span> {v.familyMembersPresent}</div>
                     <p className="text-foreground">{v.observations}</p>
                     <div><span className="text-muted-foreground">Outcome:</span> {v.visitOutcome}</div>
-                  </CardContent>
+                    <div><span className="text-muted-foreground">Cooperation:</span> {v.familyCooperationLevel}</div>
+                    {v.safetyConcernsNoted && (
+                        <Badge className="bg-red-100 text-red-800 border-red-300">Safety Concerns Noted</Badge>
+                    )}
+                    {v.followUpNeeded && (
+                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Follow-up Needed</Badge>
+                    )}                  </CardContent>
                 </Card>
               ))}
               <PaginationControl totalItems={visitations.length} pageSize={visitPagination.pageSize} currentPage={visitPagination.currentPage} onPageChange={visitPagination.setCurrentPage} />

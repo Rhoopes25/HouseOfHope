@@ -41,13 +41,13 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold" asChild>
-                <Link to="/impact">
+                <a href="#contact">
                   Donate Now <Heart className="ml-2 h-4 w-4" />
-                </Link>
+                </a>
               </Button>
               <Button size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10" asChild>
                 <a href="#about">
-                  Learn More <ArrowRight className="ml-2 h-4 w-4" />
+                  Learn Our Story <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>
             </div>
