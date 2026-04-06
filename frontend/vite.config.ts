@@ -6,9 +6,16 @@ import path from "path";
 export default defineConfig({
   server: {
     host: "::",
-    port: 8080,
+    port: 3000,
     hmr: {
       overlay: false,
+    },
+    // Dev-only: browser calls same-origin /api/... → proxied to Kestrel (avoids CORS issues)
+    proxy: {
+      "/api": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+      },
     },
   },
   plugins: [react()],

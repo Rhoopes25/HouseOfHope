@@ -16,6 +16,7 @@ x86/
 bld/
 artifacts/
 
+Mission11_Gifford/
 ## Visual Studio / MSBuild
 .vs/
 *.rsuser

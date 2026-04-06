@@ -1,64 +1,91 @@
+import { useQuery } from '@tanstack/react-query';
 import { StatCard } from '@/components/StatCard';
 import { RiskBadge } from '@/components/RiskBadge';
-import { mockResidents, mockDonations, impactStats } from '@/lib/mock-data';
-import { Users, DollarSign, AlertTriangle, CalendarClock, TrendingUp, Activity } from 'lucide-react';
+import { fetchDashboard, fetchImpactStats, fetchResidents } from '@/lib/api-endpoints';
+import { Users, DollarSign, AlertTriangle, CalendarClock, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminDashboard() {
-  const activeResidents = mockResidents.filter(r => r.caseStatus === 'active');
-  const highRiskResidents = mockResidents.filter(r => r.riskLevel === 'high' || r.riskLevel === 'critical');
-  const recentDonations = mockDonations.slice(0, 5);
+  const residentsQ = useQuery({ queryKey: ['residents'], queryFn: fetchResidents });
+  const impactQ = useQuery({ queryKey: ['impact'], queryFn: fetchImpactStats });
+  const dashQ = useQuery({ queryKey: ['dashboard'], queryFn: fetchDashboard });
 
-  const upcomingConferences = [
-    { id: '1', residentCode: 'SH1-R001', date: '2024-10-01', type: 'Quarterly Review' },
-    { id: '2', residentCode: 'SH2-R001', date: '2024-10-05', type: 'Risk Assessment' },
-    { id: '3', residentCode: 'SH1-R002', date: '2024-10-10', type: 'Reintegration Planning' },
-  ];
+  const residents = residentsQ.data;
+  const impact = impactQ.data;
+  const dash = dashQ.data;
 
-  const recentActivity = [
-    { id: '1', action: 'Counseling session completed', target: 'SH1-R001', time: '2 hours ago' },
-    { id: '2', action: 'New donation received', target: '₱25,000', time: '5 hours ago' },
-    { id: '3', action: 'Home visit scheduled', target: 'SH2-R001', time: '1 day ago' },
-    { id: '4', action: 'Intervention plan updated', target: 'SH1-R002', time: '1 day ago' },
-    { id: '5', action: 'Risk level changed to critical', target: 'SH2-R001', time: '2 days ago' },
-  ];
+  const activeResidents = residents?.filter(r => r.caseStatus === 'active').length ?? 0;
+  const highRiskResidents = dash?.highRiskResidents ?? [];
+  const recentDonations = dash?.recentDonations ?? [];
+  const monthlyDonationsTotal = dash?.monthlyDonationsTotal ?? 0;
+  const chartData = dash?.educationHealthTrend?.length
+    ? dash.educationHealthTrend
+    : impact?.monthlyTrends ?? [];
+  const upcomingConferences = dash?.upcomingConferences ?? [];
+
+  const loading = residentsQ.isLoading || impactQ.isLoading || dashQ.isLoading;
+  const err = residentsQ.error || impactQ.error || dashQ.error;
+
+  if (err) {
+    const detail = [residentsQ.error, impactQ.error, dashQ.error]
+      .filter(Boolean)
+      .map(e => (e instanceof Error ? e.message : String(e)))
+      .join(" · ");
+    return (
+      <div className="space-y-2 max-w-2xl">
+        <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
+        <p className="text-destructive text-sm">
+          Could not load dashboard data. Start the API from the <code className="text-xs">backend</code> folder
+          (<code className="text-xs">dotnet run</code> → http://localhost:4000), then refresh.
+        </p>
+        <p className="text-xs text-muted-foreground font-mono break-all">{detail}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Active Residents" value={activeResidents.length} icon={<Users className="h-6 w-6" />} description="Across all safehouses" />
-        <StatCard title="High/Critical Risk" value={highRiskResidents.length} icon={<AlertTriangle className="h-6 w-6" />} description="Requiring attention" />
-        <StatCard title="Total Donations (Sep)" value="₱890K" icon={<DollarSign className="h-6 w-6" />} description="This month" />
-        <StatCard title="Reintegration Rate" value={`${impactStats.reintegrationSuccessRate}%`} icon={<TrendingUp className="h-6 w-6" />} description="Overall success" />
+        {loading ? (
+          [...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)
+        ) : (
+          <>
+            <StatCard title="Active Residents" value={activeResidents} icon={<Users className="h-6 w-6" />} description="Across all safehouses" />
+            <StatCard title="High/Critical Risk" value={highRiskResidents.length} icon={<AlertTriangle className="h-6 w-6" />} description="Requiring attention" />
+            <StatCard title="Donations (this month)" value={`₱${Math.round(monthlyDonationsTotal).toLocaleString()}`} icon={<DollarSign className="h-6 w-6" />} description="Monetary & estimated value" />
+            <StatCard title="Reintegration Rate" value={`${impact?.reintegrationSuccessRate ?? 0}%`} icon={<TrendingUp className="h-6 w-6" />} description="Completed / closed cases" />
+          </>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left column - charts and lists */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Education & Health Progress */}
           <Card>
             <CardHeader>
               <CardTitle className="font-display text-lg">Education & Health Progress</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={impactStats.monthlyTrends}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(180 15% 90%)" />
-                  <XAxis dataKey="month" fontSize={12} />
-                  <YAxis fontSize={12} domain={[70, 100]} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="education" stroke="hsl(200 65% 55%)" strokeWidth={2} name="Education %" />
-                  <Line type="monotone" dataKey="health" stroke="hsl(174 55% 38%)" strokeWidth={2} name="Health %" />
-                </LineChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <Skeleton className="h-[250px] w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(180 15% 90%)" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} domain={[0, 100]} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="education" stroke="hsl(200 65% 55%)" strokeWidth={2} name="Education %" />
+                    <Line type="monotone" dataKey="health" stroke="hsl(174 55% 38%)" strokeWidth={2} name="Health %" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
-          {/* High Risk Residents */}
           <Card>
             <CardHeader>
               <CardTitle className="font-display text-lg flex items-center gap-2">
@@ -66,46 +93,54 @@ export default function AdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {highRiskResidents.map(r => (
-                  <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div>
-                      <p className="font-medium text-sm">{r.internalCode}</p>
-                      <p className="text-xs text-muted-foreground">{r.safehouse} · {r.assignedSocialWorker}</p>
+              {loading ? (
+                <Skeleton className="h-32 w-full" />
+              ) : (
+                <div className="space-y-3">
+                  {highRiskResidents.map(r => (
+                    <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div>
+                        <p className="font-medium text-sm">{r.internalCode}</p>
+                        <p className="text-xs text-muted-foreground">{r.safehouse} · {r.assignedSocialWorker}</p>
+                      </div>
+                      <RiskBadge level={r.riskLevel} />
                     </div>
-                    <RiskBadge level={r.riskLevel} />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                  {highRiskResidents.length === 0 && (
+                    <p className="text-sm text-muted-foreground">No high or critical risk residents in the current sample.</p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Recent Donations */}
           <Card>
             <CardHeader>
               <CardTitle className="font-display text-lg">Recent Donations</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {recentDonations.map(d => (
-                  <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div>
-                      <p className="font-medium text-sm">{d.donorName}</p>
-                      <p className="text-xs text-muted-foreground">{d.date} · {d.type}</p>
+              {loading ? (
+                <Skeleton className="h-40 w-full" />
+              ) : (
+                <div className="space-y-3">
+                  {recentDonations.map(d => (
+                    <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div>
+                        <p className="font-medium text-sm">{d.donorName}</p>
+                        <p className="text-xs text-muted-foreground">{d.date} · {d.type}</p>
+                      </div>
+                      <span className="text-sm font-semibold text-primary">
+                        {d.amount != null ? `${d.currency === 'USD' ? '$' : '₱'}${d.amount.toLocaleString()}` : d.type}
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-primary">
-                      {d.amount ? `${d.currency === 'USD' ? '$' : '₱'}${d.amount.toLocaleString()}` : d.type}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Right column - activity & conferences */}
         <div className="space-y-6">
-          {/* Upcoming Conferences */}
           <Card>
             <CardHeader>
               <CardTitle className="font-display text-lg flex items-center gap-2">
@@ -113,36 +148,21 @@ export default function AdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {upcomingConferences.map(c => (
-                  <div key={c.id} className="p-3 rounded-lg bg-muted/50">
-                    <p className="font-medium text-sm">{c.residentCode}</p>
-                    <p className="text-xs text-muted-foreground">{c.date} · {c.type}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Activity Feed */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg flex items-center gap-2">
-                <Activity className="h-5 w-5 text-primary" /> Recent Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivity.map(a => (
-                  <div key={a.id} className="flex gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm">{a.action}</p>
-                      <p className="text-xs text-muted-foreground">{a.target} · {a.time}</p>
+              {loading ? (
+                <Skeleton className="h-40 w-full" />
+              ) : (
+                <div className="space-y-3">
+                  {upcomingConferences.map(c => (
+                    <div key={c.id} className="p-3 rounded-lg bg-muted/50">
+                      <p className="font-medium text-sm">{c.residentCode}</p>
+                      <p className="text-xs text-muted-foreground">{c.date} · {c.type}</p>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                  {upcomingConferences.length === 0 && (
+                    <p className="text-sm text-muted-foreground">No upcoming case conferences found.</p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

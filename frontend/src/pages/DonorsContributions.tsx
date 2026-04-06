@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { mockSupporters, mockDonations } from '@/lib/mock-data';
+import { useQuery } from '@tanstack/react-query';
+import { fetchDonations, fetchSupporters } from '@/lib/api-endpoints';
 import { Supporter, Donation } from '@/lib/types';
 import { RiskBadge } from '@/components/RiskBadge';
 import { PaginationControl, usePagination } from '@/components/PaginationControl';
-import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,9 +13,14 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DonorsContributions() {
-  const [supporters] = useState<Supporter[]>(mockSupporters);
+  const supportersQ = useQuery({ queryKey: ['supporters'], queryFn: fetchSupporters });
+  const donationsQ = useQuery({ queryKey: ['donations'], queryFn: fetchDonations });
+  const supporters = supportersQ.data ?? [];
+  const donations = donationsQ.data ?? [];
+
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -32,9 +37,22 @@ export default function DonorsContributions() {
   const { currentPage, setCurrentPage, startIndex, endIndex, pageSize } = usePagination(filtered.length, 10);
   const paginated = filtered.slice(startIndex, endIndex);
 
-  const supporterDonations = selectedSupporter ? mockDonations.filter(d => d.supporterId === selectedSupporter.id) : [];
+  const supporterDonations = selectedSupporter
+    ? donations.filter((d: Donation) => d.supporterId === selectedSupporter.id)
+    : [];
 
-  const comingSoon = () => toast({ title: 'Coming soon', description: 'This form will be available when connected to backend.' });
+  const comingSoon = () => toast({ title: 'Coming soon', description: 'This form will be available when write APIs are enabled.' });
+
+  const loading = supportersQ.isLoading || donationsQ.isLoading;
+
+  if (supportersQ.error || donationsQ.error) {
+    return (
+      <div className="space-y-2">
+        <h1 className="text-3xl font-display font-bold text-foreground">Donors & Contributors</h1>
+        <p className="text-destructive text-sm">Could not load data from the API.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -74,71 +92,68 @@ export default function DonorsContributions() {
       </div>
 
       <div className="bg-card rounded-xl border shadow-sm overflow-x-auto">
-        <Table className="table-striped">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Country</TableHead>
-              <TableHead>Channel</TableHead>
-              <TableHead>First Donation</TableHead>
-              <TableHead>Churn Risk</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginated.map(s => (
-              <TableRow key={s.id} className="cursor-pointer" onClick={() => setSelectedSupporter(s)}>
-                <TableCell className="font-medium">{s.displayName}</TableCell>
-                <TableCell><Badge variant="secondary" className="capitalize">{s.supporterType.replace('-', ' ')}</Badge></TableCell>
-                <TableCell>
-                  <Badge variant={s.status === 'active' ? 'default' : 'secondary'} className={s.status === 'active' ? 'bg-risk-low text-white' : ''}>{s.status}</Badge>
-                </TableCell>
-                <TableCell>{s.country}</TableCell>
-                <TableCell>{s.acquisitionChannel}</TableCell>
-                <TableCell>{s.firstDonationDate}</TableCell>
-                <TableCell><RiskBadge level={s.churnRisk} /></TableCell>
+        {loading ? <Skeleton className="h-64 w-full rounded-xl" /> : (
+          <Table className="table-striped">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Channel</TableHead>
+                <TableHead>Churn Risk</TableHead>
+                <TableHead className="w-[100px]">Details</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {paginated.map(s => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium">{s.displayName}</TableCell>
+                  <TableCell className="capitalize">{s.supporterType.replace('-', ' ')}</TableCell>
+                  <TableCell><Badge variant={s.status === 'active' ? 'default' : 'secondary'}>{s.status}</Badge></TableCell>
+                  <TableCell>{s.country}</TableCell>
+                  <TableCell className="text-sm">{s.acquisitionChannel}</TableCell>
+                  <TableCell><RiskBadge level={s.churnRisk} /></TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedSupporter(s)}>View</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       <PaginationControl totalItems={filtered.length} pageSize={pageSize} currentPage={currentPage} onPageChange={setCurrentPage} />
 
-      {/* Supporter Detail Dialog */}
       <Dialog open={!!selectedSupporter} onOpenChange={() => setSelectedSupporter(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display">{selectedSupporter?.displayName}</DialogTitle>
           </DialogHeader>
+          <Button variant="ghost" size="icon" className="absolute right-4 top-4" onClick={() => setSelectedSupporter(null)}>
+            <X className="h-4 w-4" />
+          </Button>
           {selectedSupporter && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">Type:</span> <span className="capitalize ml-1">{selectedSupporter.supporterType.replace('-', ' ')}</span></div>
-                <div><span className="text-muted-foreground">Country:</span> <span className="ml-1">{selectedSupporter.country}</span></div>
-                <div><span className="text-muted-foreground">Channel:</span> <span className="ml-1">{selectedSupporter.acquisitionChannel}</span></div>
-                <div><span className="text-muted-foreground">Churn Risk:</span> <span className="ml-1"><RiskBadge level={selectedSupporter.churnRisk} /></span></div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-muted-foreground">Type:</span> {selectedSupporter.supporterType}</div>
+                <div><span className="text-muted-foreground">First gift:</span> {selectedSupporter.firstDonationDate}</div>
               </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-2">Donation History</h4>
-                {supporterDonations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No donations recorded.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {supporterDonations.map(d => (
-                      <div key={d.id} className="flex justify-between items-center p-2 rounded bg-muted/50 text-sm">
-                        <div>
-                          <span>{d.date}</span> · <span className="capitalize">{d.type}</span>
-                        </div>
-                        <span className="font-medium">
-                          {d.amount ? `${d.currency === 'USD' ? '$' : '₱'}${d.amount.toLocaleString()}` : d.itemDetails || d.skillDescription || d.campaignName || `${d.hours}h`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Card>
+                <CardHeader><CardTitle className="text-base font-display">Donations</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {supporterDonations.map((d: Donation) => (
+                    <div key={d.id} className="flex justify-between text-sm">
+                      <span>{d.date}</span>
+                      <span className="font-medium">
+                        {d.amount != null ? `₱${d.amount.toLocaleString()}` : d.type}
+                      </span>
+                    </div>
+                  ))}
+                  {supporterDonations.length === 0 && <p className="text-sm text-muted-foreground">No donations recorded.</p>}
+                </CardContent>
+              </Card>
             </div>
           )}
         </DialogContent>
