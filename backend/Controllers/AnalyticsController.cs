@@ -193,6 +193,25 @@ public class AnalyticsController : ControllerBase
         var eduRate = (int)Math.Clamp(Math.Round(eduAvg), 0, 100);
         var healthRate = (int)Math.Clamp(Math.Round(HouseOfHopeMapper.HealthToPercent(healthAvg)), 0, 100);
 
+        // Donor retention rate
+        var lastYear = DateTime.UtcNow.Year - 1;
+        var thisYear = DateTime.UtcNow.Year;
+
+        var lastYearDonors = await _db.Donations.AsNoTracking()
+            .Where(d => d.DonationDate != null && d.DonationDate.StartsWith(lastYear.ToString()))
+            .Select(d => d.SupporterId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var thisYearDonors = await _db.Donations.AsNoTracking()
+            .Where(d => d.DonationDate != null && d.DonationDate.StartsWith(thisYear.ToString()))
+            .Select(d => d.SupporterId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var retained = lastYearDonors.Intersect(thisYearDonors).Count();
+        var retentionRate = lastYearDonors.Count > 0 ? (int)Math.Round(100.0 * retained / lastYearDonors.Count) : 0;
+
         var snapshots = await _db.PublicImpactSnapshots.AsNoTracking()
             .OrderBy(s => s.SnapshotDate)
             .ToListAsync(ct);
@@ -206,6 +225,7 @@ public class AnalyticsController : ControllerBase
             ReintegrationSuccessRate = reintRate,
             EducationEnrollmentRate = eduRate,
             HealthImprovementRate = healthRate,
+            DonorRetentionRate = retentionRate,
             MonthlyTrends = trends
         };
     }

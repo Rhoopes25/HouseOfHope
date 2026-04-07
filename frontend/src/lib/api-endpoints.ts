@@ -23,6 +23,7 @@ export interface ImpactStats {
   reintegrationSuccessRate: number;
   educationEnrollmentRate: number;
   healthImprovementRate: number;
+  donorRetentionRate: number;
   monthlyTrends: MonthlyTrendPoint[];
 }
 

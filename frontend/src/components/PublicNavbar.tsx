@@ -13,9 +13,7 @@ export function PublicNavbar() {
     <nav className="bg-card/95 backdrop-blur-sm border-b sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-            <Heart className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src="/favicon.png" alt="House of Hope logo" className="h-14 w-14 rounded-full" />
           <span className="font-display text-xl font-bold text-foreground">House of Hope</span>
         </Link>
 

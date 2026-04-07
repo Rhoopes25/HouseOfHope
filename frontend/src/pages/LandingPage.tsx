@@ -27,54 +27,48 @@ export default function LandingPage() {
           <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
         </div>
         <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            className="max-w-3xl"
-          >
-            <h1 className="text-4xl md:text-6xl font-display font-bold leading-tight">
-              Every Girl Deserves a Safe Place to Call Home
-            </h1>
-            <p className="mt-6 text-lg md:text-xl opacity-90 font-body leading-relaxed max-w-2xl">
-              House of Hope operates safehouses in the Philippines for girls who are survivors of sexual abuse and trafficking. We provide shelter, healing, education, and hope for a brighter future.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold" asChild>
-                <a href="#contact">
-                  Donate Now <Heart className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10" asChild>
-                <a href="#about">
-                  Learn Our Story <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Impact Numbers */}
-      <section className="py-16 bg-card border-b">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, i) => (
-              <motion.div
-                key={stat.label}
+          <div className="flex flex-col md:flex-row items-center gap-12">
+            <motion.div
                 initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                viewport={{ once: true }}
-                className="text-center"
-              >
-                <p className="text-3xl md:text-4xl font-display font-bold text-primary">{stat.value}</p>
-                <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-              </motion.div>
-            ))}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7 }}
+                className="max-w-3xl flex-1"
+            >
+              <h1 className="text-4xl md:text-6xl font-display font-bold leading-tight">
+                Every Girl Deserves a Safe Place to Call Home
+              </h1>
+              <p className="mt-6 text-lg md:text-xl opacity-90 font-body leading-relaxed max-w-2xl">
+                House of Hope operates safehouses in the Philippines for girls who are survivors of sexual abuse and trafficking. We provide shelter, healing, education, and hope for a brighter future.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent" asChild>
+                  <Link to="/impact">
+                    View Impact
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent" asChild>
+                  <Link to="/login">
+                    Login
+                  </Link>
+                </Button>
+              </div>
+            </motion.div>
+            <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.7, delay: 0.2 }}
+                className="flex-1 hidden md:block"
+            >
+              <img
+                  src="/multiethnic-children-hands-together-with-rainbow.jpg"
+                  alt="Children joining hands together in a circle wearing colorful bracelets, representing community and hope"
+                  className="rounded-2xl shadow-2xl w-full object-cover max-h-[400px]"
+              />
+            </motion.div>
           </div>
         </div>
       </section>
+
 
       {/* What We Do */}
       <section id="about" className="py-20 gradient-warm">

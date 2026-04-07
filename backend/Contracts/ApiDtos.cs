@@ -134,6 +134,7 @@ public class ImpactStatsDto
     public int ReintegrationSuccessRate { get; set; }
     public int EducationEnrollmentRate { get; set; }
     public int HealthImprovementRate { get; set; }
+    public int DonorRetentionRate { get; set; }
     public List<MonthlyTrendDto> MonthlyTrends { get; set; } = [];
 }
 
