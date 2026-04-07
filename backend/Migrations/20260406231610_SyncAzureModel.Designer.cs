@@ -2,7 +2,6 @@
 using HouseOfHope.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -11,58 +10,52 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HouseOfHope.API.Migrations
 {
     [DbContext(typeof(LighthouseDbContext))]
-    [Migration("20260407153747_InitialAzureCreate")]
-    partial class InitialAzureCreate
+    [Migration("20260406231610_SyncAzureModel")]
+    partial class SyncAzureModel
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.5")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
-
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
 
             modelBuilder.Entity("HouseOfHope.API.Data.Donation", b =>
                 {
                     b.Property<int>("DonationId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("donation_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DonationId"));
-
                     b.Property<double?>("Amount")
-                        .HasColumnType("float")
+                        .HasColumnType("REAL")
                         .HasColumnName("amount");
 
                     b.Property<string>("CampaignName")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("campaign_name");
 
                     b.Property<string>("CurrencyCode")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("currency_code");
 
                     b.Property<string>("DonationDate")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("donation_date");
 
                     b.Property<string>("DonationType")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("donation_type");
 
                     b.Property<double?>("EstimatedValue")
-                        .HasColumnType("float")
+                        .HasColumnType("REAL")
                         .HasColumnName("estimated_value");
 
                     b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("notes");
 
                     b.Property<int>("SupporterId")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("supporter_id");
 
                     b.HasKey("DonationId");
@@ -76,21 +69,19 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("EducationRecordId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("education_record_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EducationRecordId"));
-
                     b.Property<double?>("ProgressPercent")
-                        .HasColumnType("float")
+                        .HasColumnType("REAL")
                         .HasColumnName("progress_percent");
 
                     b.Property<string>("RecordDate")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("record_date");
 
                     b.Property<int>("ResidentId")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("resident_id");
 
                     b.HasKey("EducationRecordId");
@@ -102,21 +93,19 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("HealthRecordId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("health_record_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HealthRecordId"));
-
                     b.Property<double?>("GeneralHealthScore")
-                        .HasColumnType("float")
+                        .HasColumnType("REAL")
                         .HasColumnName("general_health_score");
 
                     b.Property<string>("RecordDate")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("record_date");
 
                     b.Property<int>("ResidentId")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("resident_id");
 
                     b.HasKey("HealthRecordId");
@@ -128,57 +117,55 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("VisitationId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("visitation_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VisitationId"));
-
                     b.Property<string>("FamilyCooperationLevel")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("family_cooperation_level");
 
                     b.Property<string>("FamilyMembersPresent")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("family_members_present");
 
                     b.Property<int>("FollowUpNeeded")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("follow_up_needed");
 
                     b.Property<string>("LocationVisited")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("location_visited");
 
                     b.Property<string>("Observations")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("observations");
 
                     b.Property<string>("Purpose")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("purpose");
 
                     b.Property<int>("ResidentId")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("resident_id");
 
                     b.Property<int>("SafetyConcernsNoted")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("safety_concerns_noted");
 
                     b.Property<string>("SocialWorker")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("social_worker");
 
                     b.Property<string>("VisitDate")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("visit_date");
 
                     b.Property<string>("VisitOutcome")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("visit_outcome");
 
                     b.Property<string>("VisitType")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("visit_type");
 
                     b.HasKey("VisitationId");
@@ -190,17 +177,15 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("IncidentId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("incident_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IncidentId"));
-
                     b.Property<string>("IncidentType")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("incident_type");
 
                     b.Property<string>("Severity")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("severity");
 
                     b.HasKey("IncidentId");
@@ -212,37 +197,35 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("PlanId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("plan_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlanId"));
-
                     b.Property<string>("CaseConferenceDate")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("case_conference_date");
 
                     b.Property<string>("PlanCategory")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("plan_category");
 
                     b.Property<string>("PlanDescription")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("plan_description");
 
                     b.Property<int>("ResidentId")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("resident_id");
 
                     b.Property<string>("ServicesProvided")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("services_provided");
 
                     b.Property<string>("Status")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("status");
 
                     b.Property<string>("TargetDate")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("target_date");
 
                     b.HasKey("PlanId");
@@ -254,57 +237,55 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("RecordingId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("recording_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RecordingId"));
-
                     b.Property<int>("ConcernsFlagged")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("concerns_flagged");
 
                     b.Property<string>("EmotionalStateEnd")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("emotional_state_end");
 
                     b.Property<string>("EmotionalStateObserved")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("emotional_state_observed");
 
                     b.Property<string>("FollowUpActions")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("follow_up_actions");
 
                     b.Property<string>("InterventionsApplied")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("interventions_applied");
 
                     b.Property<int>("ProgressNoted")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("progress_noted");
 
                     b.Property<int>("ResidentId")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("resident_id");
 
                     b.Property<string>("SessionDate")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("session_date");
 
                     b.Property<int?>("SessionDurationMinutes")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("session_duration_minutes");
 
                     b.Property<string>("SessionNarrative")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("session_narrative");
 
                     b.Property<string>("SessionType")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("session_type");
 
                     b.Property<string>("SocialWorker")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("social_worker");
 
                     b.HasKey("RecordingId");
@@ -316,17 +297,15 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("SnapshotId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("snapshot_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SnapshotId"));
-
                     b.Property<string>("MetricPayloadJson")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("metric_payload_json");
 
                     b.Property<string>("SnapshotDate")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("snapshot_date");
 
                     b.HasKey("SnapshotId");
@@ -338,137 +317,135 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("ResidentId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("resident_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ResidentId"));
-
                     b.Property<string>("AssignedSocialWorker")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("assigned_social_worker");
 
                     b.Property<string>("BirthStatus")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("birth_status");
 
                     b.Property<string>("CaseCategory")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("case_category");
 
                     b.Property<string>("CaseControlNo")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("case_control_no");
 
                     b.Property<string>("CaseStatus")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("case_status");
 
                     b.Property<string>("CurrentRiskLevel")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("current_risk_level");
 
                     b.Property<string>("DateOfAdmission")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("date_of_admission");
 
                     b.Property<string>("DateOfBirth")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("date_of_birth");
 
                     b.Property<int>("FamilyIndigenous")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("family_indigenous");
 
                     b.Property<int>("FamilyInformalSettler")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("family_informal_settler");
 
                     b.Property<int>("FamilyIs4ps")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("family_is_4ps");
 
                     b.Property<int>("FamilyParentPwd")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("family_parent_pwd");
 
                     b.Property<int>("FamilySoloParent")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("family_solo_parent");
 
                     b.Property<string>("InitialCaseAssessment")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("initial_case_assessment");
 
                     b.Property<string>("InternalCode")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("internal_code");
 
                     b.Property<string>("PlaceOfBirth")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("place_of_birth");
 
                     b.Property<string>("ReferralSource")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("referral_source");
 
                     b.Property<string>("ReferringAgencyPerson")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("referring_agency_person");
 
                     b.Property<string>("ReintegrationStatus")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("reintegration_status");
 
                     b.Property<string>("ReintegrationType")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("reintegration_type");
 
                     b.Property<string>("Religion")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("religion");
 
                     b.Property<int>("SafehouseId")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("safehouse_id");
 
                     b.Property<int>("SubCatAtRisk")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_at_risk");
 
                     b.Property<int>("SubCatChildLabor")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_child_labor");
 
                     b.Property<int>("SubCatChildWithHiv")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_child_with_hiv");
 
                     b.Property<int>("SubCatCicl")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_cicl");
 
                     b.Property<int>("SubCatOrphaned")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_orphaned");
 
                     b.Property<int>("SubCatOsaec")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_osaec");
 
                     b.Property<int>("SubCatPhysicalAbuse")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_physical_abuse");
 
                     b.Property<int>("SubCatSexualAbuse")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_sexual_abuse");
 
                     b.Property<int>("SubCatStreetChild")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_street_child");
 
                     b.Property<int>("SubCatTrafficked")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("sub_cat_trafficked");
 
                     b.HasKey("ResidentId");
@@ -482,13 +459,11 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("SafehouseId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("safehouse_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SafehouseId"));
-
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.HasKey("SafehouseId");
@@ -500,57 +475,55 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("PostId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("post_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PostId"));
-
                     b.Property<string>("CampaignName")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("campaign_name");
 
                     b.Property<string>("ContentTopic")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("content_topic");
 
                     b.Property<string>("CreatedAt")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
                     b.Property<int?>("DonationReferrals")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("donation_referrals");
 
                     b.Property<double?>("EngagementRate")
-                        .HasColumnType("float")
+                        .HasColumnType("REAL")
                         .HasColumnName("engagement_rate");
 
                     b.Property<double?>("EstimatedDonationValuePhp")
-                        .HasColumnType("float")
+                        .HasColumnType("REAL")
                         .HasColumnName("estimated_donation_value_php");
 
                     b.Property<int?>("Impressions")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("impressions");
 
                     b.Property<string>("MediaType")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("media_type");
 
                     b.Property<string>("Platform")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("platform");
 
                     b.Property<string>("PostType")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("post_type");
 
                     b.Property<int?>("Reach")
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("reach");
 
                     b.Property<string>("SentimentTone")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("sentiment_tone");
 
                     b.HasKey("PostId");
@@ -562,38 +535,36 @@ namespace HouseOfHope.API.Migrations
                 {
                     b.Property<int>("SupporterId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("supporter_id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SupporterId"));
-
                     b.Property<string>("AcquisitionChannel")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("acquisition_channel");
 
                     b.Property<string>("Country")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("country");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("display_name");
 
                     b.Property<string>("FirstDonationDate")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("first_donation_date");
 
                     b.Property<string>("Region")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("region");
 
                     b.Property<string>("Status")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("status");
 
                     b.Property<string>("SupporterType")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("supporter_type");
 
                     b.HasKey("SupporterId");

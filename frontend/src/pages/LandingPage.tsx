@@ -40,15 +40,15 @@ export default function LandingPage() {
               House of Hope operates safehouses in the Philippines for girls who are survivors of sexual abuse and trafficking. We provide shelter, healing, education, and hope for a brighter future.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent" asChild>
-                <Link to="/impact">
-                  View Impact
-                </Link>
+              <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold" asChild>
+                <a href="#contact">
+                  Donate Now <Heart className="ml-2 h-4 w-4" />
+                </a>
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent" asChild>
-                <Link to="/login">
-                  Login
-                </Link>
+              <Button size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10" asChild>
+                <a href="#about">
+                  Learn Our Story <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
               </Button>
             </div>
           </motion.div>
