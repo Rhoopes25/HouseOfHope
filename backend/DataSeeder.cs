@@ -69,21 +69,17 @@ public static class DataSeeder
 
     private static List<T> ReadCsv<T>(string filePath)
     {
+        if (!File.Exists(filePath))
+            return [];
+
+        // CsvHelper runs PrepareHeaderForMatch on CSV headers *and* property names; use one symmetric form.
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
-            PrepareHeaderForMatch = args => SnakeToPascalHeader(args.Header)
+            PrepareHeaderForMatch = args => args.Header.Replace("_", "", StringComparison.Ordinal).ToLowerInvariant()
         };
         using var reader = new StreamReader(filePath);
         using var csv = new CsvReader(reader, config);
         return csv.GetRecords<T>().ToList();
-    }
-
-    /// <summary>Maps CSV headers like education_record_id to EducationRecordId for CsvHelper.</summary>
-    private static string SnakeToPascalHeader(string header)
-    {
-        var parts = header.Split('_', StringSplitOptions.RemoveEmptyEntries);
-        return string.Concat(parts.Select(static p =>
-            p.Length == 0 ? string.Empty : char.ToUpperInvariant(p[0]) + p[1..].ToLowerInvariant()));
     }
 
     private static void SeedWithIdentityInsert<T>(LighthouseDbContext context, string tableName, List<T> entities) where T : class
