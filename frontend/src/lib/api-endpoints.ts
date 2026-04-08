@@ -88,6 +88,27 @@ export const fetchResidentPlans = (id: string) =>
   apiFetch<InterventionPlan[]>(`/Residents/${id}/intervention-plans`);
 
 export const fetchSupporters = () => apiFetch<Supporter[]>('/Supporters');
+export const createSupporter = (payload: {
+  displayName: string;
+  supporterType: string;
+  status: string;
+  country?: string;
+  region?: string;
+  email?: string;
+  acquisitionChannel?: string;
+  firstDonationDate?: string;
+}) => apiFetch<Supporter>('/Supporters', { method: 'POST', body: JSON.stringify(payload) });
+export const updateSupporter = (id: string, payload: {
+  displayName: string;
+  supporterType: string;
+  status: string;
+  country?: string;
+  region?: string;
+  email?: string;
+  acquisitionChannel?: string;
+  firstDonationDate?: string;
+}) => apiFetch<void>(`/Supporters/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+export const deleteSupporter = (id: string) => apiFetch<void>(`/Supporters/${id}?confirm=true`, { method: 'DELETE' });
 
 export const fetchDonations = () => apiFetch<Donation[]>('/Donations');
 export const fetchMyDonations = () => apiFetch<Donation[]>('/Donations/my');
@@ -104,6 +125,27 @@ export const createMyDonation = (payload: {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+export const createDonation = (payload: {
+  supporterId: number;
+  donationType: string;
+  donationDate: string;
+  amount?: number;
+  estimatedValue?: number;
+  currencyCode?: string;
+  campaignName?: string;
+  notes?: string;
+}) => apiFetch<Donation>('/Donations', { method: 'POST', body: JSON.stringify(payload) });
+export const updateDonation = (id: string, payload: {
+  supporterId: number;
+  donationType: string;
+  donationDate: string;
+  amount?: number;
+  estimatedValue?: number;
+  currencyCode?: string;
+  campaignName?: string;
+  notes?: string;
+}) => apiFetch<void>(`/Donations/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+export const deleteDonation = (id: string) => apiFetch<void>(`/Donations/${id}?confirm=true`, { method: 'DELETE' });
 
 export const createResident = (payload: {
   caseControlNumber: string;
@@ -170,6 +212,27 @@ export const createResidentSession = (
     method: 'POST',
     body: JSON.stringify(payload),
   });
+export const updateResidentSession = (
+  id: string,
+  sessionId: string,
+  payload: {
+    sessionDate: string;
+    socialWorker: string;
+    sessionType: 'individual' | 'group';
+    durationMinutes?: number;
+    emotionalStateStart?: string;
+    emotionalStateEnd?: string;
+    narrative?: string;
+    interventions?: string;
+    followUpActions?: string;
+    progressNoted?: boolean;
+    concernsFlagged?: boolean;
+  },
+) =>
+  apiFetch<void>(`/Residents/${id}/sessions/${sessionId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 
 export const createResidentVisitation = (
   id: string,
@@ -189,6 +252,60 @@ export const createResidentVisitation = (
 ) =>
   apiFetch<Visitation>(`/Residents/${id}/visitations`, {
     method: 'POST',
+    body: JSON.stringify(payload),
+  });
+export const updateResidentVisitation = (
+  id: string,
+  visitationId: string,
+  payload: {
+    visitDate: string;
+    socialWorker: string;
+    visitType: string;
+    location?: string;
+    familyMembersPresent?: string;
+    purpose?: string;
+    observations?: string;
+    familyCooperationLevel?: string;
+    safetyConcernsNoted?: boolean;
+    followUpNeeded?: boolean;
+    visitOutcome?: string;
+  },
+) =>
+  apiFetch<void>(`/Residents/${id}/visitations/${visitationId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+export const createResidentPlan = (
+  id: string,
+  payload: {
+    planCategory?: string;
+    description?: string;
+    servicesProvided?: string;
+    targetDate?: string;
+    status?: 'pending' | 'in-progress' | 'completed' | 'on-hold';
+    caseConferenceDate?: string;
+  },
+) =>
+  apiFetch<InterventionPlan>(`/Residents/${id}/intervention-plans`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const updateResidentPlan = (
+  id: string,
+  planId: string,
+  payload: {
+    planCategory?: string;
+    description?: string;
+    servicesProvided?: string;
+    targetDate?: string;
+    status?: 'pending' | 'in-progress' | 'completed' | 'on-hold';
+    caseConferenceDate?: string;
+  },
+) =>
+  apiFetch<void>(`/Residents/${id}/intervention-plans/${planId}`, {
+    method: 'PUT',
     body: JSON.stringify(payload),
   });
 

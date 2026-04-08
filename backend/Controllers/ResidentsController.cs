@@ -173,6 +173,28 @@ public class ResidentsController : ControllerBase
         });
     }
 
+    [HttpPut("{id:int}/sessions/{sessionId:int}")]
+    public async Task<IActionResult> UpdateSession(int id, int sessionId, [FromBody] CreateCounselingSessionRequest request, CancellationToken ct)
+    {
+        var entity = await _db.ProcessRecordings.FirstOrDefaultAsync(p => p.ResidentId == id && p.RecordingId == sessionId, ct);
+        if (entity == null) return NotFound();
+
+        entity.SessionDate = request.SessionDate;
+        entity.SocialWorker = request.SocialWorker;
+        entity.SessionType = string.Equals(request.SessionType, "group", StringComparison.OrdinalIgnoreCase) ? "Group" : "Individual";
+        entity.SessionDurationMinutes = request.DurationMinutes;
+        entity.EmotionalStateObserved = request.EmotionalStateStart;
+        entity.EmotionalStateEnd = request.EmotionalStateEnd;
+        entity.SessionNarrative = request.Narrative;
+        entity.InterventionsApplied = request.Interventions;
+        entity.FollowUpActions = request.FollowUpActions;
+        entity.ProgressNoted = request.ProgressNoted ? 1 : 0;
+        entity.ConcernsFlagged = request.ConcernsFlagged ? 1 : 0;
+
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     [HttpGet("{id:int}/visitations")]
     public async Task<ActionResult<List<VisitationDto>>> GetVisitations(int id, CancellationToken ct)
     {
@@ -242,6 +264,28 @@ public class ResidentsController : ControllerBase
         });
     }
 
+    [HttpPut("{id:int}/visitations/{visitationId:int}")]
+    public async Task<IActionResult> UpdateVisitation(int id, int visitationId, [FromBody] CreateVisitationRequest request, CancellationToken ct)
+    {
+        var entity = await _db.HomeVisitations.FirstOrDefaultAsync(v => v.ResidentId == id && v.VisitationId == visitationId, ct);
+        if (entity == null) return NotFound();
+
+        entity.VisitDate = request.VisitDate;
+        entity.SocialWorker = request.SocialWorker;
+        entity.VisitType = request.VisitType;
+        entity.LocationVisited = request.Location;
+        entity.FamilyMembersPresent = request.FamilyMembersPresent;
+        entity.Purpose = request.Purpose;
+        entity.Observations = request.Observations;
+        entity.FamilyCooperationLevel = request.FamilyCooperationLevel;
+        entity.SafetyConcernsNoted = request.SafetyConcernsNoted ? 1 : 0;
+        entity.FollowUpNeeded = request.FollowUpNeeded ? 1 : 0;
+        entity.VisitOutcome = request.VisitOutcome;
+
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     [HttpGet("{id:int}/intervention-plans")]
     public async Task<ActionResult<List<InterventionPlanDto>>> GetPlans(int id, CancellationToken ct)
     {
@@ -264,6 +308,55 @@ public class ResidentsController : ControllerBase
         }).ToList();
     }
 
+    [HttpPost("{id:int}/intervention-plans")]
+    public async Task<ActionResult<InterventionPlanDto>> CreatePlan(int id, [FromBody] UpsertInterventionPlanRequest request, CancellationToken ct)
+    {
+        var exists = await _db.Residents.AsNoTracking().AnyAsync(r => r.ResidentId == id, ct);
+        if (!exists) return NotFound();
+
+        var entity = new InterventionPlan
+        {
+            ResidentId = id,
+            PlanCategory = request.PlanCategory,
+            PlanDescription = request.Description,
+            ServicesProvided = request.ServicesProvided,
+            TargetDate = request.TargetDate,
+            Status = MapPlanStatusToEntity(request.Status),
+            CaseConferenceDate = request.CaseConferenceDate
+        };
+        _db.InterventionPlans.Add(entity);
+        await _db.SaveChangesAsync(ct);
+
+        return Created($"/api/residents/{id}/intervention-plans/{entity.PlanId}", new InterventionPlanDto
+        {
+            Id = entity.PlanId.ToString(),
+            ResidentId = id.ToString(),
+            PlanCategory = entity.PlanCategory ?? "",
+            Description = entity.PlanDescription ?? "",
+            ServicesProvided = entity.ServicesProvided ?? "",
+            TargetDate = entity.TargetDate ?? "",
+            Status = HouseOfHopeMapper.MapPlanStatus(entity.Status),
+            CaseConferenceDate = entity.CaseConferenceDate ?? ""
+        });
+    }
+
+    [HttpPut("{id:int}/intervention-plans/{planId:int}")]
+    public async Task<IActionResult> UpdatePlan(int id, int planId, [FromBody] UpsertInterventionPlanRequest request, CancellationToken ct)
+    {
+        var entity = await _db.InterventionPlans.FirstOrDefaultAsync(p => p.ResidentId == id && p.PlanId == planId, ct);
+        if (entity == null) return NotFound();
+
+        entity.PlanCategory = request.PlanCategory;
+        entity.PlanDescription = request.Description;
+        entity.ServicesProvided = request.ServicesProvided;
+        entity.TargetDate = request.TargetDate;
+        entity.Status = MapPlanStatusToEntity(request.Status);
+        entity.CaseConferenceDate = request.CaseConferenceDate;
+
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     private async Task<int?> ResolveSafehouseIdAsync(int? safehouseId, string? safehouseName, CancellationToken ct)
     {
         if (safehouseId.HasValue)
@@ -283,6 +376,15 @@ public class ResidentsController : ControllerBase
 
         return null;
     }
+
+    private static string? MapPlanStatusToEntity(string? status) => status switch
+    {
+        "pending" => "Open",
+        "in-progress" => "In Progress",
+        "completed" => "Achieved",
+        "on-hold" => "On Hold",
+        _ => status
+    };
 }
 
 public class UpsertResidentRequest
@@ -332,4 +434,14 @@ public class CreateVisitationRequest
     public bool SafetyConcernsNoted { get; set; }
     public bool FollowUpNeeded { get; set; }
     public string? VisitOutcome { get; set; }
+}
+
+public class UpsertInterventionPlanRequest
+{
+    public string? PlanCategory { get; set; }
+    public string? Description { get; set; }
+    public string? ServicesProvided { get; set; }
+    public string? TargetDate { get; set; }
+    public string? Status { get; set; }
+    public string? CaseConferenceDate { get; set; }
 }
