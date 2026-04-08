@@ -39,8 +39,7 @@ export default function SocialMediaAnalytics() {
   const engagementByPlatform = platforms.map(platform => {
     const pp = posts.filter(p => p.platform === platform);
     const avgEngagement = pp.length ? pp.reduce((s, p) => s + p.engagementRate, 0) / pp.length : 0;
-    return { platform, engagement: +avgEngagement.toFixed(1) };
-  });
+    return { platform, engagement: +(avgEngagement * 100).toFixed(1) };  });
 
   const postTypes = [...new Set(posts.map(p => p.postType))];
   const referralsByType = postTypes.map(type => {
@@ -105,7 +104,7 @@ export default function SocialMediaAnalytics() {
                 <BarChart data={engagementByPlatform}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(180 15% 90%)" />
                   <XAxis dataKey="platform" fontSize={11} />
-                  <YAxis fontSize={12} />
+                  <YAxis fontSize={12} tickFormatter={(v) => `${v}%`} />
                   <Tooltip />
                   <Bar dataKey="engagement" fill="hsl(174, 55%, 38%)" name="Avg engagement %" />
                 </BarChart>
