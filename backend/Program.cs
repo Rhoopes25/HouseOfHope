@@ -27,7 +27,8 @@ builder.Services.AddCors(options =>
                 "https://localhost:3000",
                 "https://127.0.0.1:3000",
                 "http://localhost:5173",
-                "http://127.0.0.1:5173")
+                "http://127.0.0.1:5173"),
+                "https://polite-bush-0e7f0950f.1.azurestaticapps.net"
             .AllowAnyMethod()
             .AllowAnyHeader();
     });
