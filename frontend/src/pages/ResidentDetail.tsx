@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  createResidentSession,
+  createResidentVisitation,
   fetchResident,
   fetchResidentPlans,
   fetchResidentSessions,
@@ -15,10 +18,45 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Calendar, User, Clock, MapPin } from 'lucide-react';
 export default function ResidentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [openSession, setOpenSession] = useState(false);
+  const [openVisit, setOpenVisit] = useState(false);
+  const [sessionForm, setSessionForm] = useState({
+    sessionDate: new Date().toISOString().slice(0, 10),
+    socialWorker: '',
+    sessionType: 'individual' as 'individual' | 'group',
+    durationMinutes: 60,
+    emotionalStateStart: '',
+    emotionalStateEnd: '',
+    narrative: '',
+    interventions: '',
+    followUpActions: '',
+    progressNoted: false,
+    concernsFlagged: false,
+  });
+  const [visitForm, setVisitForm] = useState({
+    visitDate: new Date().toISOString().slice(0, 10),
+    socialWorker: '',
+    visitType: '',
+    location: '',
+    familyMembersPresent: '',
+    purpose: '',
+    observations: '',
+    familyCooperationLevel: '',
+    safetyConcernsNoted: false,
+    followUpNeeded: false,
+    visitOutcome: '',
+  });
 
   const residentQ = useQuery({
     queryKey: ['resident', id],
@@ -45,6 +83,24 @@ export default function ResidentDetail() {
   const sessions = sessionsQ.data ?? [];
   const visitations = visitsQ.data ?? [];
   const plans = plansQ.data ?? [];
+  const createSessionMutation = useMutation({
+    mutationFn: () => createResidentSession(id!, sessionForm),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['resident', id, 'sessions'] });
+      setOpenSession(false);
+      toast({ title: 'Session saved', description: 'Process recording was added.' });
+    },
+    onError: () => toast({ title: 'Save failed', description: 'Could not add counseling session.', variant: 'destructive' }),
+  });
+  const createVisitMutation = useMutation({
+    mutationFn: () => createResidentVisitation(id!, visitForm),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['resident', id, 'visitations'] });
+      setOpenVisit(false);
+      toast({ title: 'Visitation saved', description: 'Home visitation record was added.' });
+    },
+    onError: () => toast({ title: 'Save failed', description: 'Could not add visitation.', variant: 'destructive' }),
+  });
 
   const sessionPagination = usePagination(sessions.length, 5);
   const visitPagination = usePagination(visitations.length, 5);
@@ -163,6 +219,9 @@ export default function ResidentDetail() {
             </TabsContent>
 
             <TabsContent value="counseling" className="mt-6 space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => setOpenSession(true)}>Add Session</Button>
+              </div>
               {sessionsQ.isLoading ? <Skeleton className="h-40 w-full" /> : sessions.slice(sessionPagination.startIndex, sessionPagination.endIndex).map(s => (
                 <Card key={s.id}>
                   <CardHeader className="pb-2">
@@ -202,6 +261,9 @@ export default function ResidentDetail() {
             </TabsContent>
 
             <TabsContent value="visitations" className="mt-6 space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={() => setOpenVisit(true)}>Log Visitation</Button>
+              </div>
               {visitsQ.isLoading ? <Skeleton className="h-40 w-full" /> : visitations.slice(visitPagination.startIndex, visitPagination.endIndex).map(v => (
                 <Card key={v.id}>
                   <CardHeader className="pb-2">
@@ -246,6 +308,58 @@ export default function ResidentDetail() {
           </Tabs>
         </>
       )}
+
+      <Dialog open={openSession} onOpenChange={setOpenSession}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle className="font-display">Add Counseling Session</DialogTitle></DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Session Date</Label><Input type="date" value={sessionForm.sessionDate} onChange={(e) => setSessionForm({ ...sessionForm, sessionDate: e.target.value })} /></div>
+              <div><Label>Social Worker</Label><Input value={sessionForm.socialWorker} onChange={(e) => setSessionForm({ ...sessionForm, socialWorker: e.target.value })} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Type</Label><Input value={sessionForm.sessionType} onChange={(e) => setSessionForm({ ...sessionForm, sessionType: e.target.value === 'group' ? 'group' : 'individual' })} /></div>
+              <div><Label>Duration (min)</Label><Input type="number" value={sessionForm.durationMinutes} onChange={(e) => setSessionForm({ ...sessionForm, durationMinutes: Number(e.target.value) })} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Emotional State (Start)</Label><Input value={sessionForm.emotionalStateStart} onChange={(e) => setSessionForm({ ...sessionForm, emotionalStateStart: e.target.value })} /></div>
+              <div><Label>Emotional State (End)</Label><Input value={sessionForm.emotionalStateEnd} onChange={(e) => setSessionForm({ ...sessionForm, emotionalStateEnd: e.target.value })} /></div>
+            </div>
+            <div><Label>Narrative</Label><Textarea value={sessionForm.narrative} onChange={(e) => setSessionForm({ ...sessionForm, narrative: e.target.value })} /></div>
+            <div><Label>Interventions</Label><Textarea value={sessionForm.interventions} onChange={(e) => setSessionForm({ ...sessionForm, interventions: e.target.value })} /></div>
+            <div><Label>Follow-up Actions</Label><Textarea value={sessionForm.followUpActions} onChange={(e) => setSessionForm({ ...sessionForm, followUpActions: e.target.value })} /></div>
+            <label className="text-sm"><input type="checkbox" checked={sessionForm.progressNoted} onChange={(e) => setSessionForm({ ...sessionForm, progressNoted: e.target.checked })} /> Progress noted</label>
+            <label className="text-sm"><input type="checkbox" checked={sessionForm.concernsFlagged} onChange={(e) => setSessionForm({ ...sessionForm, concernsFlagged: e.target.checked })} /> Concerns flagged</label>
+            <Button onClick={() => createSessionMutation.mutate()} disabled={createSessionMutation.isPending || !sessionForm.sessionDate || !sessionForm.socialWorker}>
+              {createSessionMutation.isPending ? 'Saving...' : 'Save Session'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openVisit} onOpenChange={setOpenVisit}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle className="font-display">Log Home Visitation</DialogTitle></DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Visit Date</Label><Input type="date" value={visitForm.visitDate} onChange={(e) => setVisitForm({ ...visitForm, visitDate: e.target.value })} /></div>
+              <div><Label>Social Worker</Label><Input value={visitForm.socialWorker} onChange={(e) => setVisitForm({ ...visitForm, socialWorker: e.target.value })} /></div>
+            </div>
+            <div><Label>Visit Type</Label><Input value={visitForm.visitType} onChange={(e) => setVisitForm({ ...visitForm, visitType: e.target.value })} /></div>
+            <div><Label>Location</Label><Input value={visitForm.location} onChange={(e) => setVisitForm({ ...visitForm, location: e.target.value })} /></div>
+            <div><Label>Family Members Present</Label><Input value={visitForm.familyMembersPresent} onChange={(e) => setVisitForm({ ...visitForm, familyMembersPresent: e.target.value })} /></div>
+            <div><Label>Purpose</Label><Input value={visitForm.purpose} onChange={(e) => setVisitForm({ ...visitForm, purpose: e.target.value })} /></div>
+            <div><Label>Observations</Label><Textarea value={visitForm.observations} onChange={(e) => setVisitForm({ ...visitForm, observations: e.target.value })} /></div>
+            <div><Label>Family Cooperation Level</Label><Input value={visitForm.familyCooperationLevel} onChange={(e) => setVisitForm({ ...visitForm, familyCooperationLevel: e.target.value })} /></div>
+            <div><Label>Visit Outcome</Label><Textarea value={visitForm.visitOutcome} onChange={(e) => setVisitForm({ ...visitForm, visitOutcome: e.target.value })} /></div>
+            <label className="text-sm"><input type="checkbox" checked={visitForm.safetyConcernsNoted} onChange={(e) => setVisitForm({ ...visitForm, safetyConcernsNoted: e.target.checked })} /> Safety concerns noted</label>
+            <label className="text-sm"><input type="checkbox" checked={visitForm.followUpNeeded} onChange={(e) => setVisitForm({ ...visitForm, followUpNeeded: e.target.checked })} /> Follow-up needed</label>
+            <Button onClick={() => createVisitMutation.mutate()} disabled={createVisitMutation.isPending || !visitForm.visitDate || !visitForm.socialWorker || !visitForm.visitType}>
+              {createVisitMutation.isPending ? 'Saving...' : 'Save Visitation'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { fetchResidents } from '@/lib/api-endpoints';
+import { createResident, fetchResidents } from '@/lib/api-endpoints';
 import { Resident } from '@/lib/types';
 import { RiskBadge } from '@/components/RiskBadge';
 import { StatusPill } from '@/components/StatusPill';
@@ -9,6 +9,8 @@ import { PaginationControl, usePagination } from '@/components/PaginationControl
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Edit } from 'lucide-react';
@@ -20,7 +22,18 @@ export default function CaseloadInventory() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [riskFilter, setRiskFilter] = useState<string>('all');
   const [safehouseFilter, setSafehouseFilter] = useState<string>('all');
+  const [openCreate, setOpenCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    caseControlNumber: '',
+    internalCode: '',
+    safehouseName: '',
+    caseStatus: 'active',
+    caseCategory: '',
+    riskLevel: 'medium',
+    assignedSocialWorker: '',
+  });
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const filtered = residents.filter((r: Resident) => {
@@ -36,6 +49,25 @@ export default function CaseloadInventory() {
   const { currentPage, setCurrentPage, startIndex, endIndex, pageSize } = usePagination(filtered.length, 15);
   const paginated = filtered.slice(startIndex, endIndex);
   const safehouses = [...new Set(residents.map((r: Resident) => r.safehouse))];
+  const createResidentMutation = useMutation({
+    mutationFn: () => createResident(createForm),
+    onSuccess: async (created) => {
+      await queryClient.invalidateQueries({ queryKey: ['residents'] });
+      setOpenCreate(false);
+      setCreateForm({
+        caseControlNumber: '',
+        internalCode: '',
+        safehouseName: '',
+        caseStatus: 'active',
+        caseCategory: '',
+        riskLevel: 'medium',
+        assignedSocialWorker: '',
+      });
+      toast({ title: 'Resident added', description: 'Resident profile created successfully.' });
+      navigate(`/admin/resident/${created.id}`);
+    },
+    onError: () => toast({ title: 'Create failed', description: 'Could not create resident profile.', variant: 'destructive' }),
+  });
 
   if (error) {
     return (
@@ -50,7 +82,7 @@ export default function CaseloadInventory() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h1 className="text-3xl font-display font-bold text-foreground">Caseload Inventory</h1>
-          <Button onClick={() => toast({ title: 'Coming soon', description: 'Add resident will be available when write APIs are enabled.' })}>
+          <Button onClick={() => setOpenCreate(true)}>
             <Plus className="h-4 w-4 mr-2" /> Add Resident
           </Button>
         </div>
@@ -159,6 +191,72 @@ export default function CaseloadInventory() {
         </div>
 
         <PaginationControl totalItems={filtered.length} pageSize={pageSize} currentPage={currentPage} onPageChange={setCurrentPage} />
+
+        <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="font-display">Add Resident</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-3">
+              <div>
+                <Label>Case Control Number</Label>
+                <Input value={createForm.caseControlNumber} onChange={(e) => setCreateForm({ ...createForm, caseControlNumber: e.target.value })} />
+              </div>
+              <div>
+                <Label>Internal Code</Label>
+                <Input value={createForm.internalCode} onChange={(e) => setCreateForm({ ...createForm, internalCode: e.target.value })} />
+              </div>
+              <div>
+                <Label>Safehouse</Label>
+                <Select value={createForm.safehouseName} onValueChange={(v) => setCreateForm({ ...createForm, safehouseName: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select safehouse" /></SelectTrigger>
+                  <SelectContent>
+                    {safehouses.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Case Category</Label>
+                <Input value={createForm.caseCategory} onChange={(e) => setCreateForm({ ...createForm, caseCategory: e.target.value })} />
+              </div>
+              <div>
+                <Label>Assigned Social Worker</Label>
+                <Input value={createForm.assignedSocialWorker} onChange={(e) => setCreateForm({ ...createForm, assignedSocialWorker: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Status</Label>
+                  <Select value={createForm.caseStatus} onValueChange={(v) => setCreateForm({ ...createForm, caseStatus: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                      <SelectItem value="transferred">Transferred</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Risk</Label>
+                  <Select value={createForm.riskLevel} onValueChange={(v) => setCreateForm({ ...createForm, riskLevel: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="critical">Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button
+                onClick={() => createResidentMutation.mutate()}
+                disabled={createResidentMutation.isPending || !createForm.caseControlNumber || !createForm.internalCode || !createForm.safehouseName || !createForm.caseCategory || !createForm.assignedSocialWorker}
+              >
+                {createResidentMutation.isPending ? 'Creating...' : 'Create Resident'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
   );
 }

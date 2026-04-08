@@ -91,6 +91,106 @@ export const fetchSupporters = () => apiFetch<Supporter[]>('/Supporters');
 
 export const fetchDonations = () => apiFetch<Donation[]>('/Donations');
 export const fetchMyDonations = () => apiFetch<Donation[]>('/Donations/my');
+export const createMyDonation = (payload: {
+  donationType: 'Monetary' | 'InKind' | 'Time' | 'Skills' | 'SocialMedia';
+  donationDate: string;
+  amount?: number;
+  estimatedValue?: number;
+  currencyCode?: string;
+  campaignName?: string;
+  notes?: string;
+}) =>
+  apiFetch<Donation>('/Donations/my', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const createResident = (payload: {
+  caseControlNumber: string;
+  internalCode: string;
+  safehouseName: string;
+  caseStatus: string;
+  caseCategory: string;
+  riskLevel: string;
+  assignedSocialWorker: string;
+  reintegrationStatus?: string;
+  reintegrationType?: string;
+  admissionDate?: string;
+  dateOfBirth?: string;
+  referralSource?: string;
+  referringAgency?: string;
+  initialAssessment?: string;
+}) =>
+  apiFetch<Resident>('/Residents', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const updateResident = (
+  id: string,
+  payload: {
+    caseControlNumber: string;
+    internalCode: string;
+    safehouseName: string;
+    caseStatus: string;
+    caseCategory: string;
+    riskLevel: string;
+    assignedSocialWorker: string;
+    reintegrationStatus?: string;
+    reintegrationType?: string;
+    admissionDate?: string;
+    dateOfBirth?: string;
+    referralSource?: string;
+    referringAgency?: string;
+    initialAssessment?: string;
+  },
+) =>
+  apiFetch<void>(`/Residents/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+export const createResidentSession = (
+  id: string,
+  payload: {
+    sessionDate: string;
+    socialWorker: string;
+    sessionType: 'individual' | 'group';
+    durationMinutes?: number;
+    emotionalStateStart?: string;
+    emotionalStateEnd?: string;
+    narrative?: string;
+    interventions?: string;
+    followUpActions?: string;
+    progressNoted?: boolean;
+    concernsFlagged?: boolean;
+  },
+) =>
+  apiFetch<CounselingSession>(`/Residents/${id}/sessions`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const createResidentVisitation = (
+  id: string,
+  payload: {
+    visitDate: string;
+    socialWorker: string;
+    visitType: string;
+    location?: string;
+    familyMembersPresent?: string;
+    purpose?: string;
+    observations?: string;
+    familyCooperationLevel?: string;
+    safetyConcernsNoted?: boolean;
+    followUpNeeded?: boolean;
+    visitOutcome?: string;
+  },
+) =>
+  apiFetch<Visitation>(`/Residents/${id}/visitations`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 
 export const fetchSocialPosts = () => apiFetch<SocialMediaPost[]>('/social-media-posts');
 

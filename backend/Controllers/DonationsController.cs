@@ -23,6 +23,7 @@ public class DonationsController : ControllerBase
         var list = await _db.Donations.AsNoTracking()
             .Include(d => d.Supporter)
             .OrderByDescending(d => d.DonationDate)
+            .ThenByDescending(d => d.DonationId)
             .ToListAsync(ct);
         return list.Select(Map).ToList();
     }
@@ -40,6 +41,7 @@ public class DonationsController : ControllerBase
                 (email != null && d.Supporter.Email == email) ||
                 (displayName != null && d.Supporter.DisplayName == displayName))
             .OrderByDescending(d => d.DonationDate)
+            .ThenByDescending(d => d.DonationId)
             .ToListAsync(ct);
 
         return list.Select(Map).ToList();
@@ -52,6 +54,55 @@ public class DonationsController : ControllerBase
         var entity = new Donation
         {
             SupporterId = request.SupporterId,
+            DonationType = request.DonationType,
+            DonationDate = request.DonationDate,
+            Amount = request.Amount,
+            EstimatedValue = request.EstimatedValue,
+            CurrencyCode = request.CurrencyCode,
+            CampaignName = request.CampaignName,
+            Notes = request.Notes
+        };
+        _db.Donations.Add(entity);
+        await _db.SaveChangesAsync(ct);
+        await _db.Entry(entity).Reference(d => d.Supporter).LoadAsync(ct);
+        return Created($"/api/donations/{entity.DonationId}", Map(entity));
+    }
+
+    [HttpPost("my")]
+    [Authorize(Roles = $"{AuthRoles.Donor},{AuthRoles.Admin}")]
+    public async Task<ActionResult<DonationDto>> CreateMine([FromBody] CreateMyDonationRequest request, CancellationToken ct)
+    {
+        var email = User.FindFirstValue(ClaimTypes.Email);
+        var displayName = User.FindFirstValue("supporter_display_name");
+        var fallbackName = User.Identity?.Name;
+
+        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(displayName))
+        {
+            return BadRequest(new { message = "Cannot map logged-in user to a donor profile." });
+        }
+
+        var supporter = await _db.Supporters.FirstOrDefaultAsync(s =>
+                (email != null && s.Email == email) ||
+                (displayName != null && s.DisplayName == displayName), ct);
+
+        if (supporter == null)
+        {
+            supporter = new Supporter
+            {
+                DisplayName = string.IsNullOrWhiteSpace(displayName) ? (fallbackName ?? email ?? "Donor") : displayName,
+                Email = email,
+                SupporterType = "MonetaryDonor",
+                Status = "Active",
+                AcquisitionChannel = "Web Portal",
+                FirstDonationDate = request.DonationDate
+            };
+            _db.Supporters.Add(supporter);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        var entity = new Donation
+        {
+            SupporterId = supporter.SupporterId,
             DonationType = request.DonationType,
             DonationDate = request.DonationDate,
             Amount = request.Amount,
@@ -113,7 +164,8 @@ public class DonationsController : ControllerBase
             Date = d.DonationDate ?? "",
             Type = type,
             Currency = d.CurrencyCode ?? "PHP",
-            CampaignName = d.CampaignName
+            CampaignName = d.CampaignName,
+            Notes = d.Notes
         };
         switch (d.DonationType)
         {
@@ -149,6 +201,17 @@ public class CreateDonationRequest
     public double? Amount { get; set; }
     public double? EstimatedValue { get; set; }
     public string? CurrencyCode { get; set; }
+    public string? CampaignName { get; set; }
+    public string? Notes { get; set; }
+}
+
+public class CreateMyDonationRequest
+{
+    public string DonationType { get; set; } = "Monetary";
+    public string DonationDate { get; set; } = "";
+    public double? Amount { get; set; }
+    public double? EstimatedValue { get; set; }
+    public string? CurrencyCode { get; set; } = "PHP";
     public string? CampaignName { get; set; }
     public string? Notes { get; set; }
 }
