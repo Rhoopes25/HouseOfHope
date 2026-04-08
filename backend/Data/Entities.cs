@@ -170,6 +170,8 @@ public class Supporter
     public string? SupporterType { get; set; }
     [Column("display_name")]
     public string DisplayName { get; set; } = "";
+    [Column("email")]
+    public string? Email { get; set; }
     [Column("country")]
     public string? Country { get; set; }
     [Column("region")]

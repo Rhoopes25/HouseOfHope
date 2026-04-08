@@ -1,5 +1,6 @@
 using HouseOfHope.API.Contracts;
 using HouseOfHope.API.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace HouseOfHope.API.Controllers;
 
 [ApiController]
 [Route("api/social-media-posts")]
+[Authorize(Policy = AuthPolicies.ManageData)]
 public class SocialMediaController : ControllerBase
 {
     private readonly LighthouseDbContext _db;

@@ -97,6 +97,10 @@ Build all the required pages with all the required functionality (including, but
 * **Login Page:**  Allows users to authenticate using a username and password, with proper validation and error handling.   
 * **Privacy Policy \+ Cookie Consent:**  Provides a privacy policy explaining data usage and includes a GDPR-compliant cookie consent notification (see the IS414 section for more information). 
 
+**Donor**
+
+* **Donor Dashboard:**  Allows an authenticated donor to donate and to view their donation history.  (We obviously do not want to tie into a real payment service, but we can take a fake donation and add it into our database.)
+
 **Admin / Staff Portal (Authenticated Users Only)** 
 
 * **Admin Dashboard:** Provides a high-level overview of key metrics such as active residents across safehouses, recent donations, upcoming case conferences, and summarized progress data. Think of this as the “command center” for staff managing daily operations.  
@@ -326,7 +330,20 @@ You MUST complete the INTEX2 Peer Eval by **Friday April 10th at 11:59 PM**. The
    
 Please complete this immediately after your presentation. You will not receive an INTEX grade if you do not complete your peer evaluation. The results of your eval will be kept confidential, but it will affect team member grades. We want this to be fair for those that did the work. The solution is to make sure that you pull your weight and more. Help the team and be a great team member helping where needed and doing quality work\! 
 
-# Presentation 
+# Presentation
+
+### Schedule
+
+|  | Team Presentation Assignments |  |  |  |  |  |  |  |  |  |  |  |
+| ----- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+|  | **1** | **2** | **3** | **4** | **5** | **6** | **7** | **8** | **9** | **10** | **11** | **12** |
+| **ROOM** | TNRB 170 | TNRB 174 | TNRB 180 | TNRB 184 | TNRB 210 | TNRB 230 | TNRB W110 | TNRB W118 | TRNB W122 | TNRB W210 | TNRB W308 | TNRB W310 |
+| **12:00 \- 12:40** | 3-9 | 2-6 | 3-10 | 1-10 | 3-05 | 2-12 | 3-07 | 2-04 | 4-15 | 2-10 | 4-01 | 1-05 |
+| **12:45 \- 1:25** | 3-4 | 4-14 | 4-13 | 2-15 | 2-09 | 4-12 | 3-15 | 4-03 | 1-01 | 2-05 | 1-09 | 3-01 |
+| **1:30 \- 2:10** | 2-11 | 1-06 | 1-14 | 3-14 | 1-11 | 3-03 | 4-07 | 1-15 | 2-14 | 3-13 | 3-12 | 2-13 |
+| **2:15 \- 2:30** | Break |  |  |  |  |  |  |  |  |  |  |  |
+| **2:35-3:15** | 4-06 | 1-12 | 2-03 | 4-11 | 1-03 | 2-07 | 1-04 | 3-02 | 2-08 | 1-13 | 4-10 | 3-11 |
+| **3:20-4:00** | 1-02 | 3-06 | 4-05 | 1-08 | 4-08 | 1-07 | 2-01 | 4-09 | 3-08 | 4-02 | 2-02 | 4-04 |
 
 You will present your solution to a panel composed of industry professionals, faculty, and possibly TAs. Your solution will be evaluated on the quality of communication of the presentation, the effectiveness of your technology demo, your creativity in approaching the business problem, and how satisfied the clients are with your overall solution. The presentation will be worth 20% of the overall INTEX score.   
    

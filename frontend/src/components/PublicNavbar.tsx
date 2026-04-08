@@ -5,9 +5,14 @@ import { Heart, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
 export function PublicNavbar() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, hasRole } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   return (
     <nav className="bg-card/95 backdrop-blur-sm border-b sticky top-0 z-50">
@@ -25,16 +30,19 @@ export function PublicNavbar() {
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">Hi, {user?.displayName}</span>
-              {user?.role === 'admin' && (
+              {hasRole('admin') && (
                 <Button size="sm" variant="outline" onClick={() => navigate('/admin')}>Dashboard</Button>
               )}
-              {user?.role === 'donor' && (
+              {hasRole('donor') && (
                 <Button size="sm" variant="outline" onClick={() => navigate('/donor-portal')}>My Portal</Button>
               )}
-              <Button size="sm" variant="ghost" onClick={logout}>Logout</Button>
+              <Button size="sm" variant="ghost" onClick={handleLogout}>Logout</Button>
             </div>
           ) : (
-            <Button size="sm" onClick={() => navigate('/login')}>Login</Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => navigate('/register')}>Register</Button>
+              <Button size="sm" onClick={() => navigate('/login')}>Login</Button>
+            </div>
           )}
         </div>
 
@@ -52,12 +60,15 @@ export function PublicNavbar() {
           <Link to="/privacy" className="block text-sm font-medium" onClick={() => setMobileOpen(false)}>Privacy</Link>
           {isAuthenticated ? (
             <>
-              {user?.role === 'admin' && <Link to="/admin" className="block text-sm font-medium" onClick={() => setMobileOpen(false)}>Dashboard</Link>}
-              {user?.role === 'donor' && <Link to="/donor-portal" className="block text-sm font-medium" onClick={() => setMobileOpen(false)}>My Portal</Link>}
-              <button onClick={() => { logout(); setMobileOpen(false); }} className="block text-sm font-medium text-destructive">Logout</button>
+              {hasRole('admin') && <Link to="/admin" className="block text-sm font-medium" onClick={() => setMobileOpen(false)}>Dashboard</Link>}
+              {hasRole('donor') && <Link to="/donor-portal" className="block text-sm font-medium" onClick={() => setMobileOpen(false)}>My Portal</Link>}
+              <button onClick={() => { void handleLogout(); setMobileOpen(false); }} className="block text-sm font-medium text-destructive">Logout</button>
             </>
           ) : (
-            <Link to="/login" className="block text-sm font-medium text-primary" onClick={() => setMobileOpen(false)}>Login</Link>
+            <>
+              <Link to="/register" className="block text-sm font-medium" onClick={() => setMobileOpen(false)}>Register</Link>
+              <Link to="/login" className="block text-sm font-medium text-primary" onClick={() => setMobileOpen(false)}>Login</Link>
+            </>
           )}
         </div>
       )}

@@ -1,6 +1,7 @@
 using HouseOfHope.API.Contracts;
 using HouseOfHope.API.Data;
 using HouseOfHope.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,7 @@ namespace HouseOfHope.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = AuthPolicies.ManageData)]
 public class ResidentsController : ControllerBase
 {
     private readonly LighthouseDbContext _db;

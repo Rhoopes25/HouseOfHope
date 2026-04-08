@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Heart, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,17 +19,15 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
-    if (!username.trim()) { setError('Username is required'); return; }
+    if (!email.trim()) { setError('Email is required'); return; }
     if (!password.trim()) { setError('Password is required'); return; }
 
     setLoading(true);
-    const result = await login(username, password);
+    const result = await login(email, password);
     setLoading(false);
 
     if (result.success) {
-      // Redirect based on role
-      const stored = JSON.parse(localStorage.getItem('hoh_user') || '{}');
-      navigate(stored.role === 'admin' ? '/admin' : '/donor-portal');
+      navigate('/');
     } else {
       setError(result.error || 'Login failed');
     }
@@ -54,8 +52,8 @@ export default function LoginPage() {
               </div>
             )}
             <div>
-              <Label htmlFor="username">Username</Label>
-              <Input id="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="Enter your username" className="mt-1" />
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="mt-1" />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
@@ -67,11 +65,14 @@ export default function LoginPage() {
           </form>
           <div className="mt-6 text-center">
             <Link to="/" className="text-sm text-primary hover:underline">← Back to Home</Link>
+            <div className="mt-2">
+              <Link to="/register" className="text-sm text-primary hover:underline">Need an account? Register</Link>
+            </div>
           </div>
           <div className="mt-4 p-3 rounded-lg bg-muted text-xs text-muted-foreground">
             <p className="font-medium mb-1">Demo Accounts:</p>
-            <p>Admin: admin / password</p>
-            <p>Donor: donor / password</p>
+            <p>Admin: admin@houseofhope.local / HouseOfHope2026</p>
+            <p>Donor: donor@houseofhope.local / HouseOfHope2026</p>
           </div>
         </CardContent>
       </Card>

@@ -90,6 +90,7 @@ export const fetchResidentPlans = (id: string) =>
 export const fetchSupporters = () => apiFetch<Supporter[]>('/Supporters');
 
 export const fetchDonations = () => apiFetch<Donation[]>('/Donations');
+export const fetchMyDonations = () => apiFetch<Donation[]>('/Donations/my');
 
 export const fetchSocialPosts = () => apiFetch<SocialMediaPost[]>('/social-media-posts');
 

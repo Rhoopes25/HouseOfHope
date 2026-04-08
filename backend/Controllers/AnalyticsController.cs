@@ -2,6 +2,7 @@ using System.Globalization;
 using HouseOfHope.API.Contracts;
 using HouseOfHope.API.Data;
 using HouseOfHope.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +23,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpGet("reports")]
+    [Authorize(Policy = AuthPolicies.ManageData)]
     public async Task<ActionResult<ReportsAnalyticsDto>> Reports(CancellationToken ct)
     {
         var summary = await BuildImpactAsync(ct);
@@ -114,6 +116,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpGet("dashboard")]
+    [Authorize(Policy = AuthPolicies.ManageData)]
     public async Task<ActionResult<DashboardSummaryDto>> Dashboard(CancellationToken ct)
     {
         var impact = await BuildImpactAsync(ct);

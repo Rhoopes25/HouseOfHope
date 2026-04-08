@@ -67,6 +67,67 @@
 
     --font-display: 'Playfair Display', serif;
     --font-body: 'DM Sans', sans-serif;
+
+    /* Site footer: same as original bg-foreground / text-primary-foreground */
+    --site-footer-bg: 200 25% 15%;
+    --site-footer-fg: 0 0% 100%;
+  }
+
+  /*
+   * Warm dark: charcoal/brown base, soft cream text, muted sage primary — readable contrast
+   * without a cold blue “tech” dark theme (appropriate for survivor-centered content).
+   */
+  :root[data-user-theme='warm-dark'] {
+    --background: 30 14% 11%;
+    --foreground: 40 22% 91%;
+
+    --card: 28 12% 15%;
+    --card-foreground: 40 22% 91%;
+
+    --popover: 28 11% 13%;
+    --popover-foreground: 40 22% 91%;
+
+    --primary: 152 30% 44%;
+    --primary-foreground: 42 35% 97%;
+
+    --secondary: 28 10% 20%;
+    --secondary-foreground: 38 18% 88%;
+
+    --muted: 28 10% 22%;
+    --muted-foreground: 32 12% 66%;
+
+    --accent: 36 28% 48%;
+    --accent-foreground: 42 35% 97%;
+
+    --destructive: 0 52% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 28 10% 24%;
+    --input: 28 10% 22%;
+    --ring: 152 32% 46%;
+
+    --sidebar-background: 28 14% 10%;
+    --sidebar-foreground: 38 18% 88%;
+    --sidebar-primary: 152 30% 44%;
+    --sidebar-primary-foreground: 42 35% 97%;
+    --sidebar-accent: 28 10% 17%;
+    --sidebar-accent-foreground: 38 18% 88%;
+    --sidebar-border: 28 10% 22%;
+    --sidebar-ring: 152 32% 46%;
+
+    --warm-white: 28 12% 14%;
+    --ocean-light: 28 10% 18%;
+    --ocean: 36 26% 42%;
+    --ocean-dark: 24 16% 16%;
+    --teal: 152 28% 42%;
+    --teal-light: 28 10% 20%;
+    --teal-dark: 152 32% 32%;
+    --sand: 30 12% 18%;
+    --coral: 18 45% 52%;
+
+    /* Footer band: warm charcoal, slightly deeper than page bg */
+    --site-footer-bg: 26 18% 9%;
+    --site-footer-fg: 40 22% 92%;
   }
 }
 
@@ -97,6 +158,20 @@
   .table-striped tbody tr:hover {
     @apply bg-muted/70;
   }
+
+  /* Theme-aware site footer (matches pre–zinc-950 behavior in light mode) */
+  .site-footer {
+    background-color: hsl(var(--site-footer-bg));
+    color: hsl(var(--site-footer-fg));
+  }
+
+  .site-footer-rule {
+    border-top: 1px solid rgb(255 255 255 / 0.1);
+  }
+
+  :root[data-user-theme='warm-dark'] .site-footer-rule {
+    border-top-color: hsl(28 10% 22%);
+  }
 }
 
 @layer utilities {
@@ -107,4 +182,48 @@
   .gradient-warm {
     background: linear-gradient(135deg, hsl(var(--warm-white)) 0%, hsl(var(--ocean-light)) 100%);
   }
+
+  :root[data-user-theme='warm-dark'] .gradient-hero {
+    background: linear-gradient(
+      135deg,
+      hsl(152 26% 36%) 0%,
+      hsl(32 22% 26%) 52%,
+      hsl(24 16% 14%) 100%
+    );
+  }
+
+  :root[data-user-theme='warm-dark'] .gradient-warm {
+    background: linear-gradient(
+      135deg,
+      hsl(28 14% 13%) 0%,
+      hsl(30 12% 16%) 45%,
+      hsl(26 11% 11%) 100%
+    );
+  }
+}
+
+/*
+ * Footer theme toggle: outside @layer so Tailwind utilities (e.g. outline’s bg-background)
+ * cannot override — fixes white-on-white label in light theme.
+ */
+.site-footer button.site-footer-theme-btn {
+  border-color: rgb(255 255 255 / 0.28);
+  background-color: rgb(255 255 255 / 0.1);
+  color: hsl(var(--site-footer-fg));
+}
+
+.site-footer button.site-footer-theme-btn:hover {
+  background-color: rgb(255 255 255 / 0.16);
+  color: hsl(var(--site-footer-fg));
+}
+
+:root[data-user-theme='warm-dark'] .site-footer button.site-footer-theme-btn {
+  border-color: hsl(32 14% 32%);
+  background-color: hsl(28 12% 16%);
+  color: hsl(var(--site-footer-fg));
+}
+
+:root[data-user-theme='warm-dark'] .site-footer button.site-footer-theme-btn:hover {
+  background-color: hsl(28 12% 22%);
+  color: hsl(var(--site-footer-fg));
 }

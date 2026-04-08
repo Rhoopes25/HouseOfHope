@@ -9,13 +9,17 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, hasRole, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
+  if (requiredRole && !hasRole(requiredRole)) {
     return (
       <div className="min-h-screen flex items-center justify-center gradient-warm">
         <div className="text-center p-12 bg-card rounded-xl shadow-lg max-w-md">
