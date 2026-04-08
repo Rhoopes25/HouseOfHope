@@ -25,7 +25,7 @@ import { EditableSelect } from '@/components/EditableSelect';
 import type { Resident } from '@/lib/types';
 import { RiskBadge } from '@/components/RiskBadge';
 import { StatusPill } from '@/components/StatusPill';
-import { PaginationControl, usePagination } from '@/components/PaginationControl';
+import { PAGE_SIZE_OPTIONS, PaginationControl, usePagination } from '@/components/PaginationControl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -606,7 +606,14 @@ export default function ResidentDetail() {
                     </div>                  </CardContent>
                 </Card>
               ))}
-              <PaginationControl totalItems={sessions.length} pageSize={sessionPagination.pageSize} currentPage={sessionPagination.currentPage} onPageChange={sessionPagination.setCurrentPage} />
+              <PaginationControl
+                totalItems={sessions.length}
+                pageSize={sessionPagination.pageSize}
+                currentPage={sessionPagination.currentPage}
+                onPageChange={sessionPagination.setCurrentPage}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+                onPageSizeChange={sessionPagination.setPageSize}
+              />
             </TabsContent>
 
             <TabsContent value="visitations" className="mt-6 space-y-4">
@@ -659,7 +666,14 @@ export default function ResidentDetail() {
                     )}                  </CardContent>
                 </Card>
               ))}
-              <PaginationControl totalItems={visitations.length} pageSize={visitPagination.pageSize} currentPage={visitPagination.currentPage} onPageChange={visitPagination.setCurrentPage} />
+              <PaginationControl
+                totalItems={visitations.length}
+                pageSize={visitPagination.pageSize}
+                currentPage={visitPagination.currentPage}
+                onPageChange={visitPagination.setCurrentPage}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+                onPageSizeChange={visitPagination.setPageSize}
+              />
             </TabsContent>
 
             <TabsContent value="interventions" className="mt-6 space-y-4">

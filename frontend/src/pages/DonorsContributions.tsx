@@ -12,7 +12,7 @@ import {
 } from '@/lib/api-endpoints';
 import type { Supporter, Donation } from '@/lib/types';
 import { RiskBadge } from '@/components/RiskBadge';
-import { PaginationControl, usePagination } from '@/components/PaginationControl';
+import { PAGE_SIZE_OPTIONS, PaginationControl, usePagination } from '@/components/PaginationControl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -166,7 +166,7 @@ export default function DonorsContributions() {
     });
   }, [filteredAllDonations, contribSortKey, contribSortDir]);
 
-  const { currentPage, setCurrentPage, startIndex, endIndex, pageSize } = usePagination(sortedDonors.length, 10);
+  const { currentPage, setCurrentPage, startIndex, endIndex, pageSize, setPageSize } = usePagination(sortedDonors.length, 10);
   const paginated = sortedDonors.slice(startIndex, endIndex);
 
   const handleDonorSort = (key: string) => {
@@ -477,7 +477,14 @@ export default function DonorsContributions() {
         )}
       </div>
 
-      <PaginationControl totalItems={sortedDonors.length} pageSize={pageSize} currentPage={currentPage} onPageChange={setCurrentPage} />
+      <PaginationControl
+        totalItems={sortedDonors.length}
+        pageSize={pageSize}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSizeOptions={PAGE_SIZE_OPTIONS}
+        onPageSizeChange={setPageSize}
+      />
 
       <Card>
         <CardHeader>

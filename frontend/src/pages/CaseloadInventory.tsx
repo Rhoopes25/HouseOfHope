@@ -7,7 +7,7 @@ import { formatCaseCategoryLabel } from '@/lib/caseCategoryDisplay';
 import { displaySafehouseName } from '@/lib/safehouseDisplay';
 import { RiskBadge } from '@/components/RiskBadge';
 import { StatusPill } from '@/components/StatusPill';
-import { PaginationControl, usePagination } from '@/components/PaginationControl';
+import { PAGE_SIZE_OPTIONS, PaginationControl, usePagination } from '@/components/PaginationControl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -113,7 +113,7 @@ export default function CaseloadInventory() {
     });
   }, [filtered, sortKey, sortDir]);
 
-  const { currentPage, setCurrentPage, startIndex, endIndex, pageSize } = usePagination(sortedFiltered.length, 15);
+  const { currentPage, setCurrentPage, startIndex, endIndex, pageSize, setPageSize } = usePagination(sortedFiltered.length, 15);
   const paginated = sortedFiltered.slice(startIndex, endIndex);
 
   const handleColumnSort = (key: string) => {
@@ -377,7 +377,14 @@ export default function CaseloadInventory() {
           )}
         </div>
 
-        <PaginationControl totalItems={filtered.length} pageSize={pageSize} currentPage={currentPage} onPageChange={setCurrentPage} />
+        <PaginationControl
+          totalItems={sortedFiltered.length}
+          pageSize={pageSize}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageSizeChange={setPageSize}
+        />
 
         <Dialog open={openCreate} onOpenChange={setOpenCreate}>
           <DialogContent className="sm:max-w-4xl w-[min(100vw-2rem,56rem)] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
