@@ -104,6 +104,68 @@ public class ResidentsController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, [FromQuery] bool confirm = false, CancellationToken ct = default)
+    {
+        if (!confirm)
+        {
+            return BadRequest(new { message = "Deletion requires explicit confirmation. Pass confirm=true." });
+        }
+
+        var entity = await _db.Residents.FirstOrDefaultAsync(r => r.ResidentId == id, ct);
+        if (entity == null) return NotFound();
+
+        _db.Residents.Remove(entity);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    [HttpGet("visitations")]
+    public async Task<ActionResult<List<VisitationDto>>> GetAllVisitations(CancellationToken ct)
+    {
+        var list = await _db.HomeVisitations.AsNoTracking()
+            .OrderByDescending(v => v.VisitDate)
+            .ThenByDescending(v => v.VisitationId)
+            .Take(300)
+            .ToListAsync(ct);
+
+        return list.Select(v => new VisitationDto
+        {
+            Id = v.VisitationId.ToString(),
+            ResidentId = v.ResidentId.ToString(),
+            VisitDate = v.VisitDate ?? "",
+            SocialWorker = v.SocialWorker ?? "",
+            VisitType = v.VisitType ?? "",
+            Location = v.LocationVisited ?? "",
+            FamilyMembersPresent = v.FamilyMembersPresent ?? "",
+            Purpose = v.Purpose ?? "",
+            Observations = v.Observations ?? "",
+            FamilyCooperationLevel = v.FamilyCooperationLevel ?? "",
+            SafetyConcernsNoted = v.SafetyConcernsNoted != 0,
+            FollowUpNeeded = v.FollowUpNeeded != 0,
+            VisitOutcome = v.VisitOutcome ?? ""
+        }).ToList();
+    }
+
+    [HttpGet("case-conferences")]
+    public async Task<ActionResult<List<UpcomingConferenceDto>>> GetCaseConferences(CancellationToken ct)
+    {
+        var rows = await (
+            from p in _db.InterventionPlans.AsNoTracking()
+            join r in _db.Residents.AsNoTracking() on p.ResidentId equals r.ResidentId
+            where p.CaseConferenceDate != null && p.CaseConferenceDate != ""
+            orderby p.CaseConferenceDate descending
+            select new UpcomingConferenceDto
+            {
+                Id = p.PlanId.ToString(),
+                ResidentCode = r.InternalCode ?? "",
+                Date = p.CaseConferenceDate ?? "",
+                Type = p.PlanCategory ?? "Case Conference"
+            }).Take(300).ToListAsync(ct);
+
+        return rows;
+    }
+
     [HttpGet("{id:int}/sessions")]
     public async Task<ActionResult<List<CounselingSessionDto>>> GetSessions(int id, CancellationToken ct)
     {
@@ -191,6 +253,22 @@ public class ResidentsController : ControllerBase
         entity.ProgressNoted = request.ProgressNoted ? 1 : 0;
         entity.ConcernsFlagged = request.ConcernsFlagged ? 1 : 0;
 
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}/sessions/{sessionId:int}")]
+    public async Task<IActionResult> DeleteSession(int id, int sessionId, [FromQuery] bool confirm = false, CancellationToken ct = default)
+    {
+        if (!confirm)
+        {
+            return BadRequest(new { message = "Deletion requires explicit confirmation. Pass confirm=true." });
+        }
+
+        var entity = await _db.ProcessRecordings.FirstOrDefaultAsync(p => p.ResidentId == id && p.RecordingId == sessionId, ct);
+        if (entity == null) return NotFound();
+
+        _db.ProcessRecordings.Remove(entity);
         await _db.SaveChangesAsync(ct);
         return NoContent();
     }
@@ -286,6 +364,22 @@ public class ResidentsController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("{id:int}/visitations/{visitationId:int}")]
+    public async Task<IActionResult> DeleteVisitation(int id, int visitationId, [FromQuery] bool confirm = false, CancellationToken ct = default)
+    {
+        if (!confirm)
+        {
+            return BadRequest(new { message = "Deletion requires explicit confirmation. Pass confirm=true." });
+        }
+
+        var entity = await _db.HomeVisitations.FirstOrDefaultAsync(v => v.ResidentId == id && v.VisitationId == visitationId, ct);
+        if (entity == null) return NotFound();
+
+        _db.HomeVisitations.Remove(entity);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     [HttpGet("{id:int}/intervention-plans")]
     public async Task<ActionResult<List<InterventionPlanDto>>> GetPlans(int id, CancellationToken ct)
     {
@@ -353,6 +447,22 @@ public class ResidentsController : ControllerBase
         entity.Status = MapPlanStatusToEntity(request.Status);
         entity.CaseConferenceDate = request.CaseConferenceDate;
 
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}/intervention-plans/{planId:int}")]
+    public async Task<IActionResult> DeletePlan(int id, int planId, [FromQuery] bool confirm = false, CancellationToken ct = default)
+    {
+        if (!confirm)
+        {
+            return BadRequest(new { message = "Deletion requires explicit confirmation. Pass confirm=true." });
+        }
+
+        var entity = await _db.InterventionPlans.FirstOrDefaultAsync(p => p.ResidentId == id && p.PlanId == planId, ct);
+        if (entity == null) return NotFound();
+
+        _db.InterventionPlans.Remove(entity);
         await _db.SaveChangesAsync(ct);
         return NoContent();
     }

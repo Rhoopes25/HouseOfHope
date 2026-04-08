@@ -143,11 +143,7 @@ public class AnalyticsController : ControllerBase
             .Where(d => d.DonationDate != null && d.DonationDate.StartsWith(monthPrefix))
             .SumAsync(d => d.Amount ?? d.EstimatedValue ?? 0, ct);
 
-        var snapshots = await _db.PublicImpactSnapshots.AsNoTracking()
-            .OrderByDescending(s => s.SnapshotDate)
-            .Take(12)
-            .ToListAsync(ct);
-        var trend = BuildMonthlyTrends(snapshots);
+        var trend = await BuildMonthlyTrendsAsync(ct);
 
         var upcomingRaw = await (
             from p in _db.InterventionPlans.AsNoTracking()
@@ -196,7 +192,6 @@ public class AnalyticsController : ControllerBase
         var eduRate = (int)Math.Clamp(Math.Round(eduAvg), 0, 100);
         var healthRate = (int)Math.Clamp(Math.Round(HouseOfHopeMapper.HealthToPercent(healthAvg)), 0, 100);
 
-        // Donor retention rate
         var lastYear = DateTime.UtcNow.Year - 1;
         var thisYear = DateTime.UtcNow.Year;
 
@@ -215,11 +210,7 @@ public class AnalyticsController : ControllerBase
         var retained = lastYearDonors.Intersect(thisYearDonors).Count();
         var retentionRate = lastYearDonors.Count > 0 ? (int)Math.Round(100.0 * retained / lastYearDonors.Count) : 0;
 
-        var snapshots = await _db.PublicImpactSnapshots.AsNoTracking()
-            .OrderBy(s => s.SnapshotDate)
-            .ToListAsync(ct);
-
-        var trends = BuildMonthlyTrends(snapshots);
+        var trends = await BuildMonthlyTrendsAsync(ct);
 
         return new ImpactStatsDto
         {
@@ -233,37 +224,67 @@ public class AnalyticsController : ControllerBase
         };
     }
 
-    private static List<MonthlyTrendDto> BuildMonthlyTrends(List<PublicImpactSnapshot> snapshots)
+    private async Task<List<MonthlyTrendDto>> BuildMonthlyTrendsAsync(CancellationToken ct)
     {
-        var list = new List<MonthlyTrendDto>();
-        foreach (var s in snapshots.OrderBy(x => x.SnapshotDate).TakeLast(12))
+        var eduRecords = await _db.EducationRecords.AsNoTracking()
+            .Where(e => e.RecordDate != null && e.ProgressPercent != null)
+            .ToListAsync(ct);
+        
+        var donationRecords = await _db.Donations.AsNoTracking()
+            .Where(d => d.DonationDate != null)
+            .ToListAsync(ct);
+
+        var donationsByMonth = donationRecords
+            .GroupBy(d => d.DonationDate!.Substring(0, 7))
+            .ToDictionary(g => g.Key, g => g.Sum(d => d.Amount ?? d.EstimatedValue ?? 0));
+
+        var healthRecords = await _db.HealthWellbeingRecords.AsNoTracking()
+            .Where(h => h.RecordDate != null && h.GeneralHealthScore != null)
+            .ToListAsync(ct);
+
+        var residentRecords = await _db.Residents.AsNoTracking()
+            .Where(r => r.DateOfAdmission != null)
+            .ToListAsync(ct);
+
+        var eduByMonth = eduRecords
+            .GroupBy(e => e.RecordDate!.Substring(0, 7))
+            .ToDictionary(g => g.Key, g => g.Average(e => e.ProgressPercent!.Value));
+
+        var healthByMonth = healthRecords
+            .GroupBy(h => h.RecordDate!.Substring(0, 7))
+            .ToDictionary(g => g.Key, g => g.Average(h => h.GeneralHealthScore!.Value));
+
+        var residentsByMonth = residentRecords
+            .GroupBy(r => r.DateOfAdmission!.Substring(0, 7))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var allMonths = eduByMonth.Keys
+            .Union(healthByMonth.Keys)
+            .Union(donationsByMonth.Keys)
+            .Where(m => string.Compare(m, "2026-01") < 0)  // only before 2026
+            .OrderByDescending(m => m)
+            .Take(12)
+            .OrderBy(m => m)
+            .ToList();
+
+        return allMonths.Select(month =>
         {
-            var m = HouseOfHopeMapper.ParseMetricPayload(s.MetricPayloadJson);
-            var monthLabel = "—";
-            if (DateTime.TryParse(s.SnapshotDate, out var dt))
-                monthLabel = dt.ToString("MMM yy", CultureInfo.InvariantCulture);
-            double residents = 0, donations = 0, edu = 0, healthRaw = 3;
-            if (m != null)
+            DateTime.TryParse(month + "-01", out var dt);
+            eduByMonth.TryGetValue(month, out var edu);
+            healthByMonth.TryGetValue(month, out var healthRaw);
+            residentsByMonth.TryGetValue(month, out var residents);
+            donationsByMonth.TryGetValue(month, out var donations);
+
+
+            return new MonthlyTrendDto
             {
-                if (m.TryGetValue("total_residents", out var tr) && tr.TryGetInt32(out var tri))
-                    residents = tri;
-                if (m.TryGetValue("donations_total_for_month", out var dm) && dm.TryGetDouble(out var dmv))
-                    donations = dmv;
-                if (m.TryGetValue("avg_education_progress", out var ae) && ae.TryGetDouble(out var aev))
-                    edu = aev;
-                if (m.TryGetValue("avg_health_score", out var ah) && ah.TryGetDouble(out var ahv))
-                    healthRaw = ahv;
-            }
-            list.Add(new MonthlyTrendDto
-            {
-                Month = monthLabel,
-                Residents = (int)residents,
-                Donations = donations,
-                Education = edu,
-                Health = HouseOfHopeMapper.HealthToPercent(healthRaw)
-            });
-        }
-        return list;
+                Month = dt != default ? dt.ToString("MMM yy", CultureInfo.InvariantCulture) : month,
+                Residents = residents,
+                Education = Math.Round(Math.Min(100, edu), 1),
+                Health = HouseOfHopeMapper.HealthToPercent(healthRaw > 0 ? healthRaw : 3),
+                Donations = donations 
+            };
+        }).ToList();
     }
 
     private static DonationDto MapDonation(Donation d)

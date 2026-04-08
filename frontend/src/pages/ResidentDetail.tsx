@@ -5,6 +5,10 @@ import {
   createResidentPlan,
   createResidentSession,
   createResidentVisitation,
+  deleteResident,
+  deleteResidentPlan,
+  deleteResidentSession,
+  deleteResidentVisitation,
   fetchResident,
   fetchResidentPlans,
   fetchResidentSessions,
@@ -29,7 +33,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Calendar, Pencil, User, Clock, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, Pencil, User, Clock, MapPin, Trash2 } from 'lucide-react';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 export default function ResidentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -42,6 +47,10 @@ export default function ResidentDetail() {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingVisitId, setEditingVisitId] = useState<string | null>(null);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
+  const [deleteVisitId, setDeleteVisitId] = useState<string | null>(null);
+  const [deletePlanId, setDeletePlanId] = useState<string | null>(null);
+  const [confirmResidentDelete, setConfirmResidentDelete] = useState(false);
   const [residentForm, setResidentForm] = useState({
     caseControlNumber: '',
     internalCode: '',
@@ -218,6 +227,42 @@ export default function ResidentDetail() {
     },
     onError: () => toast({ title: 'Save failed', description: 'Could not save intervention plan.', variant: 'destructive' }),
   });
+  const deleteResidentMutation = useMutation({
+    mutationFn: () => deleteResident(id!),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['residents'] });
+      toast({ title: 'Resident deleted', description: 'Resident record removed.' });
+      navigate('/admin/caseload');
+    },
+    onError: () => toast({ title: 'Delete failed', description: 'Could not delete resident.', variant: 'destructive' }),
+  });
+  const deleteSessionMutation = useMutation({
+    mutationFn: (sessionId: string) => deleteResidentSession(id!, sessionId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['resident', id, 'sessions'] });
+      setDeleteSessionId(null);
+      toast({ title: 'Session deleted', description: 'Counseling session removed.' });
+    },
+    onError: () => toast({ title: 'Delete failed', description: 'Could not delete session.', variant: 'destructive' }),
+  });
+  const deleteVisitMutation = useMutation({
+    mutationFn: (visitId: string) => deleteResidentVisitation(id!, visitId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['resident', id, 'visitations'] });
+      setDeleteVisitId(null);
+      toast({ title: 'Visitation deleted', description: 'Visitation removed.' });
+    },
+    onError: () => toast({ title: 'Delete failed', description: 'Could not delete visitation.', variant: 'destructive' }),
+  });
+  const deletePlanMutation = useMutation({
+    mutationFn: (planId: string) => deleteResidentPlan(id!, planId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['resident', id, 'plans'] });
+      setDeletePlanId(null);
+      toast({ title: 'Plan deleted', description: 'Intervention plan removed.' });
+    },
+    onError: () => toast({ title: 'Delete failed', description: 'Could not delete plan.', variant: 'destructive' }),
+  });
 
   const sessionPagination = usePagination(sessions.length, 5);
   const visitPagination = usePagination(visitations.length, 5);
@@ -282,6 +327,9 @@ export default function ResidentDetail() {
                     setOpenResidentEdit(true);
                   }}>
                     <Pencil className="h-4 w-4 mr-1" /> Edit
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => setConfirmResidentDelete(true)}>
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete
                   </Button>
                 </div>
               </div>
@@ -369,25 +417,30 @@ export default function ResidentDetail() {
                         <Calendar className="h-4 w-4 text-primary" /> {s.sessionDate}
                       </CardTitle>
                       <Badge variant="outline" className="capitalize">{s.sessionType}</Badge>
-                      <Button variant="ghost" size="icon" onClick={() => {
-                        setEditingSessionId(s.id);
-                        setSessionForm({
-                          sessionDate: s.sessionDate,
-                          socialWorker: s.socialWorker,
-                          sessionType: s.sessionType,
-                          durationMinutes: s.durationMinutes,
-                          emotionalStateStart: s.emotionalStateStart,
-                          emotionalStateEnd: s.emotionalStateEnd,
-                          narrative: s.narrative,
-                          interventions: s.interventions,
-                          followUpActions: s.followUpActions,
-                          progressNoted: s.progressNoted,
-                          concernsFlagged: s.concernsFlagged,
-                        });
-                        setOpenSession(true);
-                      }}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => {
+                          setEditingSessionId(s.id);
+                          setSessionForm({
+                            sessionDate: s.sessionDate,
+                            socialWorker: s.socialWorker,
+                            sessionType: s.sessionType,
+                            durationMinutes: s.durationMinutes,
+                            emotionalStateStart: s.emotionalStateStart,
+                            emotionalStateEnd: s.emotionalStateEnd,
+                            narrative: s.narrative,
+                            interventions: s.interventions,
+                            followUpActions: s.followUpActions,
+                            progressNoted: s.progressNoted,
+                            concernsFlagged: s.concernsFlagged,
+                          });
+                          setOpenSession(true);
+                        }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteSessionId(s.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
@@ -428,26 +481,31 @@ export default function ResidentDetail() {
                     <CardTitle className="text-base font-display flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-primary" /> {v.visitDate} · {v.visitType}
                     </CardTitle>
-                    <Button variant="ghost" size="icon" onClick={() => {
-                      setEditingVisitId(v.id);
-                      setVisitForm({
-                        visitDate: v.visitDate,
-                        socialWorker: v.socialWorker,
-                        visitType: ['initial assessment', 'routine follow-up', 'reintegration assessment', 'post-placement monitoring', 'emergency'].includes(v.visitType.toLowerCase()) ? v.visitType.toLowerCase() : 'other',
-                        location: v.location,
-                        familyMembersPresent: v.familyMembersPresent,
-                        purpose: v.purpose,
-                        observations: v.observations,
-                        familyCooperationLevel: ['high', 'moderate', 'low', 'other'].includes((v.familyCooperationLevel || '').toLowerCase()) ? v.familyCooperationLevel.toLowerCase() : 'other',
-                        safetyConcernsNoted: v.safetyConcernsNoted,
-                        followUpNeeded: v.followUpNeeded,
-                        visitOutcome: ['completed', 'follow-up required', 'escalated', 'other'].includes((v.visitOutcome || '').toLowerCase()) ? v.visitOutcome.toLowerCase() : 'other',
-                        visitTypeOther: ['initial assessment', 'routine follow-up', 'reintegration assessment', 'post-placement monitoring', 'emergency'].includes(v.visitType.toLowerCase()) ? '' : v.visitType,
-                        cooperationOther: ['high', 'moderate', 'low', 'other'].includes((v.familyCooperationLevel || '').toLowerCase()) ? '' : v.familyCooperationLevel,
-                        outcomeOther: ['completed', 'follow-up required', 'escalated', 'other'].includes((v.visitOutcome || '').toLowerCase()) ? '' : v.visitOutcome,
-                      });
-                      setOpenVisit(true);
-                    }}><Pencil className="h-4 w-4" /></Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => {
+                        setEditingVisitId(v.id);
+                        setVisitForm({
+                          visitDate: v.visitDate,
+                          socialWorker: v.socialWorker,
+                          visitType: ['initial assessment', 'routine follow-up', 'reintegration assessment', 'post-placement monitoring', 'emergency'].includes(v.visitType.toLowerCase()) ? v.visitType.toLowerCase() : 'other',
+                          location: v.location,
+                          familyMembersPresent: v.familyMembersPresent,
+                          purpose: v.purpose,
+                          observations: v.observations,
+                          familyCooperationLevel: ['high', 'moderate', 'low', 'other'].includes((v.familyCooperationLevel || '').toLowerCase()) ? v.familyCooperationLevel.toLowerCase() : 'other',
+                          safetyConcernsNoted: v.safetyConcernsNoted,
+                          followUpNeeded: v.followUpNeeded,
+                          visitOutcome: ['completed', 'follow-up required', 'escalated', 'other'].includes((v.visitOutcome || '').toLowerCase()) ? v.visitOutcome.toLowerCase() : 'other',
+                          visitTypeOther: ['initial assessment', 'routine follow-up', 'reintegration assessment', 'post-placement monitoring', 'emergency'].includes(v.visitType.toLowerCase()) ? '' : v.visitType,
+                          cooperationOther: ['high', 'moderate', 'low', 'other'].includes((v.familyCooperationLevel || '').toLowerCase()) ? '' : v.familyCooperationLevel,
+                          outcomeOther: ['completed', 'follow-up required', 'escalated', 'other'].includes((v.visitOutcome || '').toLowerCase()) ? '' : v.visitOutcome,
+                        });
+                        setOpenVisit(true);
+                      }}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteVisitId(v.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     <div><span className="text-muted-foreground">Location:</span> {v.location}</div>
@@ -478,6 +536,7 @@ export default function ResidentDetail() {
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded-full capitalize ${planStatusColors[p.status] ?? ''}`}>{p.status}</span>
                         <Button variant="ghost" size="icon" onClick={() => { setEditingPlanId(p.id); setPlanForm({ planCategory: p.planCategory, planCategoryOther: '', description: p.description, servicesProvided: p.servicesProvided, targetDate: p.targetDate, status: p.status, caseConferenceDate: p.caseConferenceDate }); setOpenPlan(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletePlanId(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
                     </div>
                   </CardHeader>
@@ -634,6 +693,35 @@ export default function ResidentDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        open={confirmResidentDelete}
+        onClose={() => setConfirmResidentDelete(false)}
+        onConfirm={() => deleteResidentMutation.mutate()}
+        title="Delete resident?"
+        description="This will permanently remove the resident record."
+      />
+      <ConfirmDeleteDialog
+        open={!!deleteSessionId}
+        onClose={() => setDeleteSessionId(null)}
+        onConfirm={() => deleteSessionId && deleteSessionMutation.mutate(deleteSessionId)}
+        title="Delete counseling session?"
+        description="This process recording entry will be permanently removed."
+      />
+      <ConfirmDeleteDialog
+        open={!!deleteVisitId}
+        onClose={() => setDeleteVisitId(null)}
+        onConfirm={() => deleteVisitId && deleteVisitMutation.mutate(deleteVisitId)}
+        title="Delete visitation?"
+        description="This home visitation record will be permanently removed."
+      />
+      <ConfirmDeleteDialog
+        open={!!deletePlanId}
+        onClose={() => setDeletePlanId(null)}
+        onConfirm={() => deletePlanId && deletePlanMutation.mutate(deletePlanId)}
+        title="Delete intervention plan?"
+        description="This case plan will be permanently removed."
+      />
     </div>
   );
 }

@@ -84,8 +84,14 @@ export const fetchResidentSessions = (id: string) =>
 export const fetchResidentVisitations = (id: string) =>
   apiFetch<Visitation[]>(`/Residents/${id}/visitations`);
 
+export const fetchAllVisitations = () =>
+  apiFetch<Visitation[]>('/Residents/visitations');
+
 export const fetchResidentPlans = (id: string) =>
   apiFetch<InterventionPlan[]>(`/Residents/${id}/intervention-plans`);
+
+export const fetchCaseConferences = () =>
+  apiFetch<UpcomingConference[]>('/Residents/case-conferences');
 
 export const fetchSupporters = () => apiFetch<Supporter[]>('/Supporters');
 export const createSupporter = (payload: {
@@ -192,6 +198,9 @@ export const updateResident = (
     body: JSON.stringify(payload),
   });
 
+export const deleteResident = (id: string) =>
+  apiFetch<void>(`/Residents/${id}?confirm=true`, { method: 'DELETE' });
+
 export const createResidentSession = (
   id: string,
   payload: {
@@ -232,6 +241,11 @@ export const updateResidentSession = (
   apiFetch<void>(`/Residents/${id}/sessions/${sessionId}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  });
+
+export const deleteResidentSession = (id: string, sessionId: string) =>
+  apiFetch<void>(`/Residents/${id}/sessions/${sessionId}?confirm=true`, {
+    method: 'DELETE',
   });
 
 export const createResidentVisitation = (
@@ -276,6 +290,11 @@ export const updateResidentVisitation = (
     body: JSON.stringify(payload),
   });
 
+export const deleteResidentVisitation = (id: string, visitationId: string) =>
+  apiFetch<void>(`/Residents/${id}/visitations/${visitationId}?confirm=true`, {
+    method: 'DELETE',
+  });
+
 export const createResidentPlan = (
   id: string,
   payload: {
@@ -307,6 +326,11 @@ export const updateResidentPlan = (
   apiFetch<void>(`/Residents/${id}/intervention-plans/${planId}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  });
+
+export const deleteResidentPlan = (id: string, planId: string) =>
+  apiFetch<void>(`/Residents/${id}/intervention-plans/${planId}?confirm=true`, {
+    method: 'DELETE',
   });
 
 export const fetchSocialPosts = () => apiFetch<SocialMediaPost[]>('/social-media-posts');

@@ -64,6 +64,18 @@ export default function DonorsContributions() {
   });
 
   const normalizedSupporters = useMemo(() => supporters, [supporters]);
+  const supporterTypeValues = useMemo(
+    () => [...new Set([...supporterTypeOptions, ...supporters.map((s) => s.supporterType)])],
+    [supporters],
+  );
+  const donationTypeValues = useMemo(
+    () => [...new Set([...donationTypeOptions, ...donations.map((d) => d.type)])],
+    [donations],
+  );
+  const channelValues = useMemo(
+    () => [...new Set([...channelOptions, ...supporters.map((s) => (s.acquisitionChannel || '').toLowerCase()).filter(Boolean)])],
+    [supporters],
+  );
   const normalizedDonations = useMemo(
     () => [...donations].sort((a, b) => (b.date || '').localeCompare(a.date || '') || Number(b.id) - Number(a.id)),
     [donations],
@@ -360,7 +372,7 @@ export default function DonorsContributions() {
               <Label>Type</Label>
               <Select value={supporterForm.supporterType} onValueChange={(v) => setSupporterForm({ ...supporterForm, supporterType: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{supporterTypeOptions.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                <SelectContent>{supporterTypeValues.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {supporterForm.supporterType === 'other' && <div><Label>New Type</Label><Input value={supporterForm.supporterTypeOther} onChange={(e) => setSupporterForm({ ...supporterForm, supporterTypeOther: e.target.value })} /></div>}
@@ -377,7 +389,7 @@ export default function DonorsContributions() {
               <Label>Acquisition Channel</Label>
               <Select value={supporterForm.acquisitionChannel} onValueChange={(v) => setSupporterForm({ ...supporterForm, acquisitionChannel: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{channelOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                <SelectContent>{channelValues.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {supporterForm.acquisitionChannel === 'other' && <div><Label>New Channel</Label><Input value={supporterForm.acquisitionChannelOther} onChange={(e) => setSupporterForm({ ...supporterForm, acquisitionChannelOther: e.target.value })} /></div>}
@@ -409,7 +421,7 @@ export default function DonorsContributions() {
               <Label>Donation Type</Label>
               <Select value={donationForm.donationType} onValueChange={(v) => setDonationForm({ ...donationForm, donationType: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{donationTypeOptions.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                <SelectContent>{donationTypeValues.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {donationForm.donationType === 'other' && <div><Label>New Donation Type</Label><Input value={donationForm.donationTypeOther} onChange={(e) => setDonationForm({ ...donationForm, donationTypeOther: e.target.value })} /></div>}

@@ -92,7 +92,7 @@ export default function DonorImpactDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="font-display text-lg">Girls Helped Over Time</CardTitle>
+                <CardTitle className="font-display text-lg">Donations Over Time</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? <Skeleton className="h-[300px] w-full" /> : (
@@ -100,9 +100,9 @@ export default function DonorImpactDashboard() {
                       <LineChart data={trends}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(180 15% 90%)" />
                         <XAxis dataKey="month" fontSize={12} />
-                        <YAxis fontSize={12} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="residents" stroke="hsl(174 55% 38%)" strokeWidth={3} dot={{ fill: 'hsl(174 55% 38%)' }} />
+                        <YAxis fontSize={12} tickFormatter={(v) => `₱${(v/1000).toFixed(0)}K`} />
+                        <Tooltip formatter={(v: number) => `₱${v.toLocaleString()}`} />
+                        <Line type="monotone" dataKey="donations" stroke="hsl(174 55% 38%)" strokeWidth={3} dot={{ fill: 'hsl(174 55% 38%)' }} name="Donations (PHP)" />
                       </LineChart>
                     </ResponsiveContainer>
                 )}

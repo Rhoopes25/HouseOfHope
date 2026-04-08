@@ -9,7 +9,7 @@ export interface AuthSession {
 const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
 
 const normalizeAuthApiBaseUrl = (baseUrl: string) => {
-  if (!baseUrl) return "";
+  if (!baseUrl) return "/api";
   const withoutTrailingSlash = baseUrl.replace(/\/+$/, "");
   return withoutTrailingSlash.endsWith("/api")
     ? withoutTrailingSlash

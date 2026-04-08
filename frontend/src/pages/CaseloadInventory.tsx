@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { EditableSelect } from '@/components/EditableSelect';
 
 export default function CaseloadInventory() {
   const { data: residents = [], isLoading, error } = useQuery({ queryKey: ['residents'], queryFn: fetchResidents });
@@ -29,8 +30,10 @@ export default function CaseloadInventory() {
     safehouseName: '',
     caseStatus: 'active',
     caseCategory: '',
+    caseCategoryOther: '',
     riskLevel: 'medium',
     assignedSocialWorker: '',
+    assignedSocialWorkerOther: '',
   });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -49,8 +52,14 @@ export default function CaseloadInventory() {
   const { currentPage, setCurrentPage, startIndex, endIndex, pageSize } = usePagination(filtered.length, 15);
   const paginated = filtered.slice(startIndex, endIndex);
   const safehouses = [...new Set(residents.map((r: Resident) => r.safehouse))];
+  const caseCategories = [...new Set(residents.map((r: Resident) => r.caseCategory).filter(Boolean))];
+  const socialWorkers = [...new Set(residents.map((r: Resident) => r.assignedSocialWorker).filter(Boolean))];
   const createResidentMutation = useMutation({
-    mutationFn: () => createResident(createForm),
+    mutationFn: () => createResident({
+      ...createForm,
+      caseCategory: createForm.caseCategory === 'other' ? createForm.caseCategoryOther : createForm.caseCategory,
+      assignedSocialWorker: createForm.assignedSocialWorker === 'other' ? createForm.assignedSocialWorkerOther : createForm.assignedSocialWorker,
+    }),
     onSuccess: async (created) => {
       await queryClient.invalidateQueries({ queryKey: ['residents'] });
       setOpenCreate(false);
@@ -60,8 +69,10 @@ export default function CaseloadInventory() {
         safehouseName: '',
         caseStatus: 'active',
         caseCategory: '',
+        caseCategoryOther: '',
         riskLevel: 'medium',
         assignedSocialWorker: '',
+        assignedSocialWorkerOther: '',
       });
       toast({ title: 'Resident added', description: 'Resident profile created successfully.' });
       navigate(`/admin/resident/${created.id}`);
@@ -208,20 +219,34 @@ export default function CaseloadInventory() {
               </div>
               <div>
                 <Label>Safehouse</Label>
-                <Select value={createForm.safehouseName} onValueChange={(v) => setCreateForm({ ...createForm, safehouseName: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select safehouse" /></SelectTrigger>
-                  <SelectContent>
-                    {safehouses.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <EditableSelect
+                  label="Safehouse"
+                  value={createForm.safehouseName}
+                  customValue={createForm.safehouseName}
+                  options={safehouses}
+                  onChange={(v) => setCreateForm({ ...createForm, safehouseName: v === 'other' ? '' : v })}
+                  onCustomChange={(v) => setCreateForm({ ...createForm, safehouseName: v })}
+                />
               </div>
               <div>
-                <Label>Case Category</Label>
-                <Input value={createForm.caseCategory} onChange={(e) => setCreateForm({ ...createForm, caseCategory: e.target.value })} />
+                <EditableSelect
+                  label="Case Category"
+                  value={createForm.caseCategory}
+                  customValue={createForm.caseCategoryOther}
+                  options={caseCategories}
+                  onChange={(v) => setCreateForm({ ...createForm, caseCategory: v })}
+                  onCustomChange={(v) => setCreateForm({ ...createForm, caseCategoryOther: v })}
+                />
               </div>
               <div>
-                <Label>Assigned Social Worker</Label>
-                <Input value={createForm.assignedSocialWorker} onChange={(e) => setCreateForm({ ...createForm, assignedSocialWorker: e.target.value })} />
+                <EditableSelect
+                  label="Assigned Social Worker"
+                  value={createForm.assignedSocialWorker}
+                  customValue={createForm.assignedSocialWorkerOther}
+                  options={socialWorkers}
+                  onChange={(v) => setCreateForm({ ...createForm, assignedSocialWorker: v })}
+                  onCustomChange={(v) => setCreateForm({ ...createForm, assignedSocialWorkerOther: v })}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -250,7 +275,14 @@ export default function CaseloadInventory() {
               </div>
               <Button
                 onClick={() => createResidentMutation.mutate()}
-                disabled={createResidentMutation.isPending || !createForm.caseControlNumber || !createForm.internalCode || !createForm.safehouseName || !createForm.caseCategory || !createForm.assignedSocialWorker}
+                disabled={
+                  createResidentMutation.isPending ||
+                  !createForm.caseControlNumber ||
+                  !createForm.internalCode ||
+                  !createForm.safehouseName ||
+                  !(createForm.caseCategory === 'other' ? createForm.caseCategoryOther : createForm.caseCategory) ||
+                  !(createForm.assignedSocialWorker === 'other' ? createForm.assignedSocialWorkerOther : createForm.assignedSocialWorker)
+                }
               >
                 {createResidentMutation.isPending ? 'Creating...' : 'Create Resident'}
               </Button>

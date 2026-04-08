@@ -107,3 +107,4 @@ Thumbs.db
 # Editor (optional: keep team shared settings via !.vscode/extensions.json)
 .vscode/*
 !.vscode/extensions.json
+backend/*.sqlite

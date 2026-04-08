@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Heart, Shield, BookOpen, Users, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const stats = [
   { label: 'Girls Rescued', value: '247+' },
@@ -18,6 +19,8 @@ const services = [
 ];
 
 export default function LandingPage() {
+  const { isAuthenticated } = useAuth();  // ADD THIS LINE
+
   return (
     <div>
       {/* Hero */}
@@ -46,11 +49,11 @@ export default function LandingPage() {
                     View Impact
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent" asChild>
-                  <Link to="/login">
-                    Login
-                  </Link>
-                </Button>
+                {!isAuthenticated && (  // WRAP THE LOGIN BUTTON
+                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent" asChild>
+                      <Link to="/login">Login</Link>
+                    </Button>
+                )}
               </div>
             </motion.div>
             <motion.div
