@@ -335,6 +335,49 @@ export const deleteResidentPlan = (id: string, planId: string) =>
     method: 'DELETE',
   });
 
+  export interface SocialMediaPredictionInput {
+    postHour: number;
+    numHashtags: number;
+    mentionsCount: number;
+    captionLength: number;
+    boostBudgetPhp: number;
+    isBoostedNum: number;
+    hasCallToActionNum: number;
+    featuresResidentStoryNum: number;
+    lexDonateHits: number;
+    lexUrgentHits: number;
+    lexGratitudeHits: number;
+    lexEmotionHits: number;
+    lexSentimentNet: number;
+    priorPostsSamePlatform: number;
+    hoursSinceLastSamePlatform: number;
+    platform: string;
+    postType: string;
+    mediaType: string;
+    dayOfWeek: string;
+    callToActionType: string;
+    contentTopic: string;
+    sentimentTone: string;
+  }
+  
+  export interface SocialMediaPredictionResult {
+    estimatedDonationValuePhp: number;
+    engagementRate: number;
+    recommendations: string[];
+  }
+  
+  export const predictSocialMediaPost = async (
+    input: SocialMediaPredictionInput
+  ): Promise<SocialMediaPredictionResult> => {
+    const res = await fetch('/api/ML/social-media/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error('Prediction failed');
+    return res.json();
+  };
 export const fetchSocialPosts = () => apiFetch<SocialMediaPost[]>('/social-media-posts');
 
 export const fetchImpactStats = () => apiFetch<ImpactStats>('/Analytics/impact');
