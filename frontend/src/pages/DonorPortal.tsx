@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchImpactStats, fetchMyDonations } from '@/lib/api-endpoints';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createMyDonation, fetchImpactStats, fetchMyDonations } from '@/lib/api-endpoints';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatCard } from '@/components/StatCard';
 import { PublicNavbar } from '@/components/PublicNavbar';
@@ -8,15 +8,112 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Heart, DollarSign, Clock, Package, Megaphone } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DonorPortal() {
+  const TO_PHP_RATE: Record<'PHP' | 'USD' | 'EUR', number> = {
+    PHP: 1,
+    USD: 56,
+    EUR: 61,
+  };
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const donationsQ = useQuery({ queryKey: ['my-donations'], queryFn: fetchMyDonations });
   const impactQ = useQuery({ queryKey: ['impact'], queryFn: fetchImpactStats });
+  const [amount, setAmount] = useState('1000');
+  const [donationType, setDonationType] = useState<'monetary' | 'time' | 'in-kind' | 'skills' | 'social-media'>('monetary');
+  const [inputCurrency, setInputCurrency] = useState<'PHP' | 'USD' | 'EUR'>('PHP');
+  const [donationDate, setDonationDate] = useState(new Date().toISOString().slice(0, 10));
+  const [campaignName, setCampaignName] = useState('');
+  const [notes, setNotes] = useState('');
 
-  const myDonations = useMemo(() => donationsQ.data ?? [], [donationsQ.data]);
+  const createDonationMutation = useMutation({
+    mutationFn: () => {
+      const trimmedNotes = notes.trim() || undefined;
+      const trimmedCampaign = campaignName.trim() || 'Donor Portal';
+      const numericAmount = Number(amount);
+      const phpValue = numericAmount * TO_PHP_RATE[inputCurrency];
+
+      switch (donationType) {
+        case 'time':
+          return createMyDonation({
+            donationType: 'Time',
+            donationDate,
+            estimatedValue: Number(amount),
+            notes: trimmedNotes,
+            campaignName: trimmedCampaign,
+          });
+        case 'in-kind':
+          return createMyDonation({
+            donationType: 'InKind',
+            donationDate,
+            estimatedValue: phpValue,
+            currencyCode: 'PHP',
+            notes: trimmedNotes,
+            campaignName: trimmedCampaign,
+          });
+        case 'skills':
+          return createMyDonation({
+            donationType: 'Skills',
+            donationDate,
+            estimatedValue: phpValue,
+            currencyCode: 'PHP',
+            notes: trimmedNotes,
+            campaignName: trimmedCampaign,
+          });
+        case 'social-media':
+          return createMyDonation({
+            donationType: 'SocialMedia',
+            donationDate,
+            estimatedValue: phpValue,
+            currencyCode: 'PHP',
+            notes: trimmedNotes,
+            campaignName: trimmedCampaign,
+          });
+        case 'monetary':
+        default:
+          return createMyDonation({
+            donationType: 'Monetary',
+            donationDate,
+            amount: phpValue,
+            currencyCode: 'PHP',
+            notes: trimmedNotes,
+            campaignName: trimmedCampaign,
+          });
+      }
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['my-donations'] }),
+        queryClient.invalidateQueries({ queryKey: ['impact'] }),
+      ]);
+      setNotes('');
+      setCampaignName('');
+      setAmount(donationType === 'monetary' ? '1000' : '2');
+      toast({ title: 'Donation recorded', description: 'Your donation was saved and added to your giving history.' });
+    },
+    onError: () => {
+      toast({ title: 'Donation failed', description: 'Unable to record donation right now.', variant: 'destructive' });
+    },
+  });
+
+  const myDonations = useMemo(
+    () =>
+      [...(donationsQ.data ?? [])].sort((a, b) => {
+        const dateCompare = (b.date || '').localeCompare(a.date || '');
+        if (dateCompare !== 0) return dateCompare;
+        return Number(b.id) - Number(a.id);
+      }),
+    [donationsQ.data],
+  );
 
   const totalGiven = myDonations
     .filter(d => d.type === 'monetary')
@@ -45,6 +142,21 @@ export default function DonorPortal() {
   const impact = impactQ.data;
 
   const loading = donationsQ.isLoading || impactQ.isLoading;
+
+  const amountLabel = donationType === 'monetary'
+    ? `Amount (${inputCurrency})`
+    : donationType === 'time'
+      ? 'Hours'
+      : `Estimated Value (${inputCurrency})`;
+  const notesPlaceholder = donationType === 'in-kind'
+    ? 'Example: 20 hygiene kits, school supplies, blankets...'
+    : donationType === 'skills'
+      ? 'Example: legal consult, tutoring, counseling support...'
+      : donationType === 'social-media'
+        ? 'Example: posted survivor-safe awareness campaign on Instagram...'
+        : donationType === 'time'
+          ? 'Example: Saturday mentoring shift at safehouse...'
+          : 'Any note for this donation...';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -100,6 +212,72 @@ export default function DonorPortal() {
 
           <Card>
             <CardHeader>
+              <CardTitle className="font-display text-lg">Make a Donation (Simulation)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Donation Type</Label>
+                  <Select
+                    value={donationType}
+                    onValueChange={(v: 'monetary' | 'time' | 'in-kind' | 'skills' | 'social-media') => {
+                      setDonationType(v);
+                      setAmount(v === 'monetary' ? '1000' : '2');
+                    }}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monetary">Monetary</SelectItem>
+                      <SelectItem value="time">Time</SelectItem>
+                      <SelectItem value="in-kind">In-Kind</SelectItem>
+                      <SelectItem value="skills">Skills</SelectItem>
+                      <SelectItem value="social-media">Social Media</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="donation-amount">{amountLabel}</Label>
+                  <Input id="donation-amount" type="number" min="0.25" step="0.25" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                </div>
+                {donationType !== 'time' && (
+                  <div>
+                    <Label>Input Currency</Label>
+                    <Select value={inputCurrency} onValueChange={(v: 'PHP' | 'USD' | 'EUR') => setInputCurrency(v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PHP">PHP</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="donation-date">Donation Date</Label>
+                  <Input id="donation-date" type="date" value={donationDate} onChange={(e) => setDonationDate(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="donation-campaign">Campaign / Source (optional)</Label>
+                  <Input id="donation-campaign" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Spring Outreach Campaign" />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="donation-notes">Notes (optional)</Label>
+                  <Textarea id="donation-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={notesPlaceholder} />
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button
+                  onClick={() => createDonationMutation.mutate()}
+                  disabled={createDonationMutation.isPending || !Number(amount) || Number(amount) <= 0 || !donationDate}
+                >
+                  {createDonationMutation.isPending ? 'Recording...' : 'Submit Donation'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="font-display text-lg">Your Giving History</CardTitle>
             </CardHeader>
             <CardContent>
@@ -110,9 +288,21 @@ export default function DonorPortal() {
                       <div>
                         <p className="font-medium text-sm">{d.date}</p>
                         <p className="text-xs text-muted-foreground capitalize">{d.type} donation</p>
+                        {d.campaignName && <p className="text-xs text-muted-foreground mt-1">Campaign: {d.campaignName}</p>}
+                        {d.notes && <p className="text-xs text-muted-foreground mt-1">{d.notes}</p>}
                       </div>
                       <span className="font-semibold text-primary">
-                        {d.amount != null ? `${d.currency === 'USD' ? '$' : '₱'}${d.amount.toLocaleString()}` : d.type}
+                        {d.type === 'time'
+                          ? `${(d.hours ?? d.amount ?? 0).toLocaleString()} hrs`
+                          : d.type === 'social-media'
+                            ? 'Social campaign'
+                            : d.type === 'skills'
+                              ? d.skillDescription || 'Skills contribution'
+                              : d.type === 'in-kind'
+                                ? d.itemDetails || `₱${(d.amount ?? 0).toLocaleString()}`
+                          : d.amount != null
+                            ? `${d.currency === 'USD' ? '$' : '₱'}${d.amount.toLocaleString()}`
+                            : d.type}
                       </span>
                     </div>
                   ))}

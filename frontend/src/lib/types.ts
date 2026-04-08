@@ -106,6 +106,7 @@ export interface Donation {
   hours?: number;
   skillDescription?: string;
   campaignName?: string;
+  notes?: string;
 }
 
 export interface SocialMediaPost {

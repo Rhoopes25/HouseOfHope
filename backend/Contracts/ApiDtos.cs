@@ -100,6 +100,7 @@ public class DonationDto
     public double? Hours { get; set; }
     public string? SkillDescription { get; set; }
     public string? CampaignName { get; set; }
+    public string? Notes { get; set; }
 }
 
 public class SocialMediaPostDto
