@@ -6,6 +6,7 @@ import { Users, DollarSign, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend,
@@ -13,10 +14,20 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 
 const COLORS = ['hsl(174, 55%, 38%)', 'hsl(200, 65%, 55%)', 'hsl(12, 70%, 65%)', 'hsl(35, 40%, 60%)', 'hsl(142, 60%, 45%)'];
+const RATES: Record<string, number> = { PHP: 1, USD: 1 / 56, EUR: 1 / 61 };
+const SYMBOLS: Record<string, string> = { PHP: '₱', USD: '$', EUR: '€' };
+
+function formatDonation(value: number, currency: string) {
+  const converted = value * RATES[currency];
+  if (converted >= 1_000_000) return `${SYMBOLS[currency]}${(converted / 1_000_000).toFixed(1)}M`;
+  if (converted >= 1_000) return `${SYMBOLS[currency]}${(converted / 1_000).toFixed(0)}K`;
+  return `${SYMBOLS[currency]}${converted.toFixed(0)}`;
+}
 
 export default function ReportsAnalytics() {
   const [dateFrom, setDateFrom] = useState('2024-01-01');
   const [dateTo, setDateTo] = useState('2024-09-30');
+  const [currency, setCurrency] = useState<'PHP' | 'USD' | 'EUR'>('PHP');
   const { data, isLoading, error } = useQuery({ queryKey: ['reports-analytics'], queryFn: fetchReportsAnalytics });
 
   const summary = data?.summary;
@@ -25,6 +36,8 @@ export default function ReportsAnalytics() {
     const total = rows.reduce((s, r) => s + r.value, 0) || 1;
     return rows.map(r => ({ name: r.name, value: Math.round((r.value / total) * 100) }));
   }, [data?.donationsByType]);
+
+  const formattedDonations = formatDonation(summary?.totalDonationsReceived ?? 0, currency);
 
   if (error) {
     return (
@@ -39,28 +52,25 @@ export default function ReportsAnalytics() {
       <div className="space-y-6">
         <h1 className="text-3xl font-display font-bold text-foreground">Reports & Analytics</h1>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           <div>
             <Label htmlFor="date-from" className="text-xs text-foreground font-medium">From</Label>
-            <Input
-                id="date-from"
-                type="date"
-                value={dateFrom}
-                onChange={e => setDateFrom(e.target.value)}
-                className="w-auto"
-                aria-label="Filter from date"
-            />
+            <Input id="date-from" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-auto" aria-label="Filter from date" />
           </div>
           <div>
             <Label htmlFor="date-to" className="text-xs text-foreground font-medium">To</Label>
-            <Input
-                id="date-to"
-                type="date"
-                value={dateTo}
-                onChange={e => setDateTo(e.target.value)}
-                className="w-auto"
-                aria-label="Filter to date"
-            />
+            <Input id="date-to" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-auto" aria-label="Filter to date" />
+          </div>
+          <div>
+            <Label className="text-xs">Currency</Label>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as 'PHP' | 'USD' | 'EUR')}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PHP">₱ PHP</SelectItem>
+                <SelectItem value="USD">$ USD</SelectItem>
+                <SelectItem value="EUR">€ EUR</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -70,7 +80,7 @@ export default function ReportsAnalytics() {
           ) : (
               <>
                 <StatCard title="Total Residents Served" value={summary?.totalResidentsServed ?? 0} icon={<Users className="h-6 w-6" />} />
-                <StatCard title="Total Donations" value={`₱${((summary?.totalDonationsReceived ?? 0) / 1000).toFixed(0)}K`} icon={<DollarSign className="h-6 w-6" />} />
+                <StatCard title="Total Donations" value={formattedDonations} icon={<DollarSign className="h-6 w-6" />} />
                 <StatCard title="Reintegration Success" value={`${summary?.reintegrationSuccessRate ?? 0}%`} icon={<TrendingUp className="h-6 w-6" />} />
               </>
           )}
@@ -78,19 +88,15 @@ export default function ReportsAnalytics() {
 
         <div className="grid lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">
-                <h2 className="text-lg font-semibold">Donation Trends</h2>
-              </CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="font-display text-lg"><h2 className="text-lg font-semibold">Donation Trends</h2></CardTitle></CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-[280px] w-full" /> : (
                   <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={summary?.monthlyTrends ?? []}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(180 15% 90%)" />
                       <XAxis dataKey="month" fontSize={12} />
-                      <YAxis fontSize={12} tickFormatter={v => `₱${v / 1000}K`} />
-                      <Tooltip formatter={(v: number) => `₱${v.toLocaleString()}`} />
+                      <YAxis fontSize={12} tickFormatter={v => `${SYMBOLS[currency]}${((v * RATES[currency]) / 1000).toFixed(0)}K`} />
+                      <Tooltip formatter={(v: number) => `${SYMBOLS[currency]}${(v * RATES[currency]).toLocaleString()}`} />
                       <Line type="monotone" dataKey="donations" stroke="hsl(174, 55%, 38%)" strokeWidth={2} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -99,11 +105,7 @@ export default function ReportsAnalytics() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">
-                <h2 className="text-lg font-semibold">Donations by Type</h2>
-              </CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="font-display text-lg"><h2 className="text-lg font-semibold">Donations by Type</h2></CardTitle></CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-[280px] w-full" /> : (
                   <ResponsiveContainer width="100%" height={280}>
@@ -119,11 +121,7 @@ export default function ReportsAnalytics() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">
-                <h2 className="text-lg font-semibold">Education & Health Over Time</h2>
-              </CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="font-display text-lg"><h2 className="text-lg font-semibold">Education & Health Over Time</h2></CardTitle></CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-[280px] w-full" /> : (
                   <ResponsiveContainer width="100%" height={280}>
@@ -142,11 +140,7 @@ export default function ReportsAnalytics() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">
-                <h2 className="text-lg font-semibold">Safehouse Performance</h2>
-              </CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="font-display text-lg"><h2 className="text-lg font-semibold">Safehouse Performance</h2></CardTitle></CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-[280px] w-full" /> : (
                   <ResponsiveContainer width="100%" height={280}>
@@ -165,11 +159,7 @@ export default function ReportsAnalytics() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">
-                <h2 className="text-lg font-semibold">Reintegration Success by Type</h2>
-              </CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="font-display text-lg"><h2 className="text-lg font-semibold">Reintegration Success by Type</h2></CardTitle></CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-[280px] w-full" /> : (
                   <ResponsiveContainer width="100%" height={280}>
@@ -186,11 +176,7 @@ export default function ReportsAnalytics() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">
-                <h2 className="text-lg font-semibold">Incidents by Type & Severity</h2>
-              </CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="font-display text-lg"><h2 className="text-lg font-semibold">Incidents by Type & Severity</h2></CardTitle></CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-[280px] w-full" /> : (
                   <ResponsiveContainer width="100%" height={280}>
