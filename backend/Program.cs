@@ -22,12 +22,20 @@ else
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 }
 
-builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
+if (builder.Environment.IsDevelopment())
 {
-    var identityConnection = builder.Configuration.GetConnectionString("IdentityConnection")
-        ?? "Data Source=houseofhope_identity.sqlite";
-    options.UseSqlite(identityConnection);
-});
+    builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
+    {
+        var identityConnection = builder.Configuration.GetConnectionString("IdentityConnection")
+            ?? "Data Source=houseofhope_identity.sqlite";
+        options.UseSqlite(identityConnection);
+    });
+}
+else
+{
+    builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
 
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
     .AddRoles<IdentityRole>()
@@ -112,7 +120,14 @@ using (var scope = app.Services.CreateScope())
     }
 
     var identityDb = scope.ServiceProvider.GetRequiredService<AuthIdentityDbContext>();
-    await identityDb.Database.MigrateAsync();
+    if (app.Environment.IsDevelopment())
+    {
+        identityDb.Database.EnsureCreated();
+    }
+    else
+    {
+        await identityDb.Database.MigrateAsync();
+    }
     await AuthIdentityGenerator.GenerateDefaultIdentityAsync(scope.ServiceProvider, app.Configuration);
 }
 
