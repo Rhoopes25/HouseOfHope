@@ -8,39 +8,57 @@ namespace HouseOfHope.API.Data;
 
 public static class DataSeeder
 {
-    public static void Seed(LighthouseDbContext context)
+    public static void Seed(LighthouseDbContext context, string contentRootPath)
     {
-        var baseDir = AppContext.BaseDirectory;
+        var residentsPath = CsvPath(contentRootPath, "residents.csv");
+
+        Console.WriteLine($"DIAGNOSTIC: ContentRootPath: {contentRootPath}");
+        Console.WriteLine($"DIAGNOSTIC: Expected residents.csv path: {residentsPath}");
+        var seedDataDir = Path.Combine(contentRootPath, "SeedData");
+        if (Directory.Exists(seedDataDir))
+        {
+            var csvNames = Directory.GetFiles(seedDataDir, "*.csv").Select(Path.GetFileName);
+            Console.WriteLine($"DIAGNOSTIC: SeedData folder found; CSV files ({csvNames.Count()}): {string.Join(", ", csvNames)}");
+        }
+        else
+        {
+            Console.WriteLine($"DIAGNOSTIC: SeedData folder NOT found at: {seedDataDir}");
+        }
 
         // PHASE 1: Parent Tables (No dependencies)
-        if (!context.Safehouses.Any() && File.Exists(CsvPath(baseDir, "safehouses.csv")))
+        if (!context.Safehouses.Any() && File.Exists(CsvPath(contentRootPath, "safehouses.csv")))
         {
-            var safehouses = ReadCsv<Safehouse>(CsvPath(baseDir, "safehouses.csv"));
+            var safehouses = ReadCsv<Safehouse>(CsvPath(contentRootPath, "safehouses.csv"));
             SeedWithIdentityInsert(context, "safehouses", safehouses);
         }
 
-        if (!context.Supporters.Any() && File.Exists(CsvPath(baseDir, "supporters.csv")))
+        if (!context.Supporters.Any() && File.Exists(CsvPath(contentRootPath, "supporters.csv")))
         {
-            var supporters = ReadCsv<Supporter>(CsvPath(baseDir, "supporters.csv"));
+            var supporters = ReadCsv<Supporter>(CsvPath(contentRootPath, "supporters.csv"));
             SeedWithIdentityInsert(context, "supporters", supporters);
         }
 
         // PHASE 2: Core Entities (Rely on Phase 1)
-        if (!context.Residents.Any() && File.Exists(CsvPath(baseDir, "residents.csv")))
+        if (!context.Residents.Any() && File.Exists(residentsPath))
         {
-            var residents = ReadCsv<Resident>(CsvPath(baseDir, "residents.csv"));
+            var residents = ReadCsv<Resident>(residentsPath);
             SeedWithIdentityInsert(context, "residents", residents);
         }
-
-        if (!context.EducationRecords.Any() && File.Exists(CsvPath(baseDir, "education_records.csv")))
+        else
         {
-            var educationRecords = ReadCsv<EducationRecord>(CsvPath(baseDir, "education_records.csv"));
+            Console.WriteLine(
+                $"DIAGNOSTIC: Residents seed skipped. Table has data: {context.Residents.Any()}, File exists: {File.Exists(residentsPath)}");
+        }
+
+        if (!context.EducationRecords.Any() && File.Exists(CsvPath(contentRootPath, "education_records.csv")))
+        {
+            var educationRecords = ReadCsv<EducationRecord>(CsvPath(contentRootPath, "education_records.csv"));
             SeedWithIdentityInsert(context, "education_records", educationRecords);
         }
 
-        if (!context.HealthWellbeingRecords.Any() && File.Exists(CsvPath(baseDir, "health_wellbeing_records.csv")))
+        if (!context.HealthWellbeingRecords.Any() && File.Exists(CsvPath(contentRootPath, "health_wellbeing_records.csv")))
         {
-            var healthRecords = ReadCsv<HealthWellbeingRecord>(CsvPath(baseDir, "health_wellbeing_records.csv"));
+            var healthRecords = ReadCsv<HealthWellbeingRecord>(CsvPath(contentRootPath, "health_wellbeing_records.csv"));
             SeedWithIdentityInsert(context, "health_wellbeing_records", healthRecords);
         }
     }

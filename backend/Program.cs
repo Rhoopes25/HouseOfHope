@@ -116,7 +116,7 @@ using (var scope = app.Services.CreateScope())
     else
     {
         appDb.Database.Migrate();
-        DataSeeder.Seed(appDb);
+        DataSeeder.Seed(appDb, app.Environment.ContentRootPath);
     }
 
     var identityDb = scope.ServiceProvider.GetRequiredService<AuthIdentityDbContext>();
