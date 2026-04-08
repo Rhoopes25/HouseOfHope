@@ -92,7 +92,7 @@ export default function DonorImpactDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="font-display text-lg">Girls Helped Over Time</CardTitle>
+                <CardTitle className="font-display text-lg">Active Residents</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? <Skeleton className="h-[300px] w-full" /> : (
