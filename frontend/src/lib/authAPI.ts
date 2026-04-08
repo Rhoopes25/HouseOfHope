@@ -6,7 +6,17 @@ export interface AuthSession {
   roles: string[];
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
+
+const normalizeAuthApiBaseUrl = (baseUrl: string) => {
+  if (!baseUrl) return "";
+  const withoutTrailingSlash = baseUrl.replace(/\/+$/, "");
+  return withoutTrailingSlash.endsWith("/api")
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api`;
+};
+
+const apiBaseUrl = normalizeAuthApiBaseUrl(configuredApiBaseUrl);
 
 async function readApiError(response: Response, fallbackMessage: string): Promise<string> {
   const contentType = response.headers.get("content-type") ?? "";
@@ -19,13 +29,13 @@ async function readApiError(response: Response, fallbackMessage: string): Promis
 }
 
 export async function getAuthSession(): Promise<AuthSession> {
-  const response = await fetch(`${apiBaseUrl}/api/auth/me`, { credentials: "include" });
+  const response = await fetch(`${apiBaseUrl}/auth/me`, { credentials: "include" });
   if (!response.ok) throw new Error("Unable to load auth session.");
   return response.json();
 }
 
 export async function loginUser(email: string, password: string): Promise<void> {
-  const response = await fetch(`${apiBaseUrl}/api/auth/login?useCookies=true`, {
+  const response = await fetch(`${apiBaseUrl}/auth/login?useCookies=true`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -43,7 +53,7 @@ export async function registerUser(payload: {
   displayName?: string;
   roles: string[];
 }): Promise<void> {
-  const response = await fetch(`${apiBaseUrl}/api/auth/register-with-roles`, {
+  const response = await fetch(`${apiBaseUrl}/auth/register-with-roles`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -56,7 +66,7 @@ export async function registerUser(payload: {
 }
 
 export async function logoutUser(): Promise<void> {
-  const response = await fetch(`${apiBaseUrl}/api/auth/logout`, {
+  const response = await fetch(`${apiBaseUrl}/auth/logout`, {
     method: "POST",
     credentials: "include",
   });
