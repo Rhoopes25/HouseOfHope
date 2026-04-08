@@ -3,12 +3,19 @@ using HouseOfHope.API.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 const string FrontendCorsPolicy = "Frontend";
 
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
+// Local ML services must not use the system proxy (often breaks 127.0.0.1 on Windows).
+builder.Services.AddHttpClient("CaseManagementMl")
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { UseProxy = false });
+builder.Services.AddHttpClient("DonorChurnMl")
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { UseProxy = false });
 builder.Services.AddOpenApi();
 
 if (builder.Environment.IsDevelopment())

@@ -22,6 +22,8 @@ import DonorsContributions from "./pages/DonorsContributions";
 import ReportsAnalytics from "./pages/ReportsAnalytics";
 import SocialMediaAnalytics from "./pages/SocialMediaAnalytics";
 import HomeVisitCaseConferences from "./pages/HomeVisitCaseConferences";
+import CaseRiskPriorities from "./pages/CaseRiskPriorities";
+import DonorChurnPriorities from "./pages/DonorChurnPriorities";
 import DonorPortal from "./pages/DonorPortal";
 import NotFound from "./pages/NotFound";
 
@@ -66,6 +68,8 @@ const App = () => (
               }>
                 <Route index element={<AdminDashboard />} />
                 <Route path="caseload" element={<CaseloadInventory />} />
+                <Route path="case-risk" element={<CaseRiskPriorities />} />
+                <Route path="donor-churn" element={<DonorChurnPriorities />} />
                 <Route path="resident/:id" element={<ResidentDetail />} />
                 <Route path="field-ops" element={<HomeVisitCaseConferences />} />
                 <Route path="donors" element={<DonorsContributions />} />

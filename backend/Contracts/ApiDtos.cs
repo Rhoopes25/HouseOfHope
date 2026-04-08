@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace HouseOfHope.API.Contracts;
 
 public class ResidentDto
@@ -191,4 +193,67 @@ public class UpcomingConferenceDto
     public string ResidentCode { get; set; } = "";
     public string Date { get; set; } = "";
     public string Type { get; set; } = "";
+}
+
+/// <summary>
+/// Proxied from the optional Python case-management ML service (<c>/v1/priorities</c>).
+/// </summary>
+public class CaseRiskPrioritiesResponseDto
+{
+    [JsonPropertyName("csv_dir")]
+    public string CsvDir { get; set; } = "";
+
+    [JsonPropertyName("priorities")]
+    public List<CaseRiskPriorityDto> Priorities { get; set; } = [];
+}
+
+public class CaseRiskPriorityDto
+{
+    [JsonPropertyName("resident_id")]
+    public int ResidentId { get; set; }
+
+    [JsonPropertyName("risk_probability")]
+    public double RiskProbability { get; set; }
+
+    [JsonPropertyName("risk_segment")]
+    public string RiskSegment { get; set; } = "";
+
+    [JsonPropertyName("model")]
+    public string Model { get; set; } = "";
+}
+
+/// <summary>
+/// Proxied from the optional Python donor-churn ML service (<c>/v1/churn-priorities</c>).
+/// </summary>
+public class DonorChurnPrioritiesResponseDto
+{
+    [JsonPropertyName("csv_dir")]
+    public string CsvDir { get; set; } = "";
+
+    [JsonPropertyName("as_of")]
+    public string AsOf { get; set; } = "";
+
+    [JsonPropertyName("feature_cutoff")]
+    public string FeatureCutoff { get; set; } = "";
+
+    [JsonPropertyName("priorities")]
+    public List<DonorChurnPriorityDto> Priorities { get; set; } = [];
+}
+
+public class DonorChurnPriorityDto
+{
+    [JsonPropertyName("supporter_id")]
+    public int SupporterId { get; set; }
+
+    [JsonPropertyName("churn_probability")]
+    public double ChurnProbability { get; set; }
+
+    [JsonPropertyName("in_outreach_top_k")]
+    public bool InOutreachTopK { get; set; }
+
+    [JsonPropertyName("churn_risk_segment")]
+    public string ChurnRiskSegment { get; set; } = "";
+
+    [JsonPropertyName("model")]
+    public string Model { get; set; } = "";
 }

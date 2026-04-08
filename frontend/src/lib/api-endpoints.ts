@@ -1,4 +1,4 @@
-import { apiFetch } from './api';
+import { apiFetch, API_BASE_URL } from './api';
 import type {
   CounselingSession,
   Donation,
@@ -340,3 +340,62 @@ export const fetchImpactStats = () => apiFetch<ImpactStats>('/Analytics/impact')
 export const fetchReportsAnalytics = () => apiFetch<ReportsAnalyticsPayload>('/Analytics/reports');
 
 export const fetchDashboard = () => apiFetch<DashboardSummary>('/Analytics/dashboard');
+
+/** ML triage list (proxied to Python service when configured on the API). */
+export interface CaseRiskPriority {
+  resident_id: number;
+  risk_probability: number;
+  risk_segment: string;
+  model: string;
+}
+
+export interface CaseRiskPrioritiesResponse {
+  csv_dir: string;
+  priorities: CaseRiskPriority[];
+}
+
+export async function fetchCaseRiskPriorities(): Promise<CaseRiskPrioritiesResponse> {
+  const res = await fetch(`${API_BASE_URL}/CaseManagement/risk-priorities`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const data: unknown = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const body = data as { error?: string; detail?: string };
+    const parts = [body.error, body.detail].filter((x): x is string => Boolean(x && String(x).trim()));
+    const msg = parts.length ? parts.join(' — ') : `${res.status} ${res.statusText}`;
+    throw new Error(msg);
+  }
+  return data as CaseRiskPrioritiesResponse;
+}
+
+/** Donor churn triage (proxied to Python service when configured on the API). */
+export interface DonorChurnPriority {
+  supporter_id: number;
+  churn_probability: number;
+  in_outreach_top_k: boolean;
+  churn_risk_segment: string;
+  model: string;
+}
+
+export interface DonorChurnPrioritiesResponse {
+  csv_dir: string;
+  as_of: string;
+  feature_cutoff: string;
+  priorities: DonorChurnPriority[];
+}
+
+export async function fetchDonorChurnPriorities(): Promise<DonorChurnPrioritiesResponse> {
+  const res = await fetch(`${API_BASE_URL}/DonorChurn/churn-priorities`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const data: unknown = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const body = data as { error?: string; detail?: string };
+    const parts = [body.error, body.detail].filter((x): x is string => Boolean(x && String(x).trim()));
+    const msg = parts.length ? parts.join(' — ') : `${res.status} ${res.statusText}`;
+    throw new Error(msg);
+  }
+  return data as DonorChurnPrioritiesResponse;
+}

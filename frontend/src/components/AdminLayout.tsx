@@ -15,13 +15,15 @@ import {
 } from '@/components/ui/sidebar';
 import { NavLink } from '@/components/NavLink';
 import {
-  LayoutDashboard, Users, HandCoins, BarChart3, Share2, Heart, LogOut, Home, MapPinned,
+  LayoutDashboard, Users, HandCoins, BarChart3, Share2, Heart, LogOut, Home, MapPinned, Activity, UserRoundX,
 } from 'lucide-react';
 import { SiteFooter } from '@/components/SiteFooter';
 
 const adminNav = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
   { title: 'Caseload', url: '/admin/caseload', icon: Users },
+  { title: 'Case risk (ML)', url: '/admin/case-risk', icon: Activity },
+  { title: 'Donor churn (ML)', url: '/admin/donor-churn', icon: UserRoundX },
   { title: 'Visitations & Conferences', url: '/admin/field-ops', icon: MapPinned },
   { title: 'Donors', url: '/admin/donors', icon: HandCoins },
   { title: 'Reports', url: '/admin/reports', icon: BarChart3 },
