@@ -90,18 +90,22 @@ public static class DataSeeder
     {
         if (!entities.Any()) return;
 
-        context.Set<T>().AddRange(entities);
-
-        context.Database.OpenConnection();
+        using var transaction = context.Database.BeginTransaction();
         try
         {
-            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT {tableName} ON");
+            context.Set<T>().AddRange(entities);
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [{tableName}] ON");
             context.SaveChanges();
-            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT {tableName} OFF");
+            context.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [{tableName}] OFF");
+            transaction.Commit();
         }
-        finally
+        catch (Exception ex)
         {
-            context.Database.CloseConnection();
+            transaction.Rollback();
+            Console.WriteLine($"DIAGNOSTIC: CRITICAL ERROR seeding table [{tableName}]: {ex.Message}");
+            if (ex.InnerException != null)
+                Console.WriteLine($"DIAGNOSTIC: Inner exception: {ex.InnerException.Message}");
+            throw;
         }
     }
 }
