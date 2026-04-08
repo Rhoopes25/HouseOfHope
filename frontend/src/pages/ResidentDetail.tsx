@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,6 +10,7 @@ import {
   deleteResidentSession,
   deleteResidentVisitation,
   fetchResident,
+  fetchResidents,
   fetchResidentPlans,
   fetchResidentSessions,
   fetchResidentVisitations,
@@ -18,6 +19,10 @@ import {
   updateResidentSession,
   updateResidentVisitation,
 } from '@/lib/api-endpoints';
+import { formatCaseCategoryLabel } from '@/lib/caseCategoryDisplay';
+import { displaySafehouseName } from '@/lib/safehouseDisplay';
+import { EditableSelect } from '@/components/EditableSelect';
+import type { Resident } from '@/lib/types';
 import { RiskBadge } from '@/components/RiskBadge';
 import { StatusPill } from '@/components/StatusPill';
 import { PaginationControl, usePagination } from '@/components/PaginationControl';
@@ -35,6 +40,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Calendar, Pencil, User, Clock, MapPin, Trash2 } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+
+function matchSelectOption(value: string, options: string[]): { select: string; other: string } {
+  const n = value.trim().toLowerCase();
+  const hit = options.find((o) => o.trim().toLowerCase() === n);
+  if (hit) return { select: hit, other: '' };
+  if (!value.trim()) return { select: '', other: '' };
+  return { select: 'other', other: value };
+}
+
 export default function ResidentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -67,6 +81,29 @@ export default function ResidentDetail() {
     initialAssessment: '',
     admissionDate: '',
     dateOfBirth: '',
+    religion: '',
+    birthStatus: '',
+    placeOfBirth: '',
+    subCatOrphaned: false,
+    subCatTrafficked: false,
+    subCatChildLabor: false,
+    subCatPhysicalAbuse: false,
+    subCatSexualAbuse: false,
+    subCatOsaec: false,
+    subCatCicl: false,
+    subCatAtRisk: false,
+    subCatStreetChild: false,
+    subCatChildWithHiv: false,
+    familyIs4ps: false,
+    familySoloParent: false,
+    familyIndigenous: false,
+    familyInformalSettler: false,
+    familyParentPwd: false,
+    assignedSocialWorkerOther: '',
+    reintegrationStatusOther: '',
+    reintegrationTypeOther: '',
+    religionOther: '',
+    birthStatusOther: '',
   });
   const [sessionForm, setSessionForm] = useState({
     sessionDate: new Date().toISOString().slice(0, 10),
@@ -112,6 +149,58 @@ export default function ResidentDetail() {
     queryFn: () => fetchResident(id!),
     enabled: !!id,
   });
+  const residentsRosterQ = useQuery({ queryKey: ['residents'], queryFn: fetchResidents });
+  const allResidents = residentsRosterQ.data ?? [];
+
+  const safehouseOptions = useMemo(
+    () =>
+      [...new Set(allResidents.map((r: Resident) => r.safehouse).filter(Boolean))].sort((a, b) =>
+        displaySafehouseName(a).localeCompare(displaySafehouseName(b), undefined, { numeric: true }),
+      ),
+    [allResidents],
+  );
+  const socialWorkerOptions = useMemo(
+    () =>
+      [...new Set(allResidents.map((r: Resident) => r.assignedSocialWorker).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' }),
+      ),
+    [allResidents],
+  );
+  const reintStatusOptions = useMemo(
+    () =>
+      [...new Set(allResidents.map((r: Resident) => r.reintegrationStatus).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' }),
+      ),
+    [allResidents],
+  );
+  const reintTypeOptions = useMemo(
+    () =>
+      [...new Set(allResidents.map((r: Resident) => r.reintegrationType).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' }),
+      ),
+    [allResidents],
+  );
+  const religionOptions = useMemo(
+    () =>
+      [...new Set(allResidents.map((r: Resident) => r.religion).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' }),
+      ),
+    [allResidents],
+  );
+  const birthStatusOptions = useMemo(
+    () =>
+      [...new Set(allResidents.map((r: Resident) => r.birthStatus).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' }),
+      ),
+    [allResidents],
+  );
+  const caseCategoryOptions = useMemo(
+    () =>
+      [...new Set(allResidents.map((r: Resident) => r.caseCategory).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' }),
+      ),
+    [allResidents],
+  );
   const sessionsQ = useQuery({
     queryKey: ['resident', id, 'sessions'],
     queryFn: () => fetchResidentSessions(id!),
@@ -160,14 +249,35 @@ export default function ResidentDetail() {
       caseStatus: residentForm.caseStatus,
       caseCategory: residentForm.caseCategory === 'other' ? residentForm.caseCategoryOther : residentForm.caseCategory,
       riskLevel: residentForm.riskLevel,
-      assignedSocialWorker: residentForm.assignedSocialWorker,
-      reintegrationStatus: residentForm.reintegrationStatus,
-      reintegrationType: residentForm.reintegrationType,
+      assignedSocialWorker:
+        residentForm.assignedSocialWorker === 'other' ? residentForm.assignedSocialWorkerOther : residentForm.assignedSocialWorker,
+      reintegrationStatus:
+        residentForm.reintegrationStatus === 'other' ? residentForm.reintegrationStatusOther : residentForm.reintegrationStatus,
+      reintegrationType:
+        residentForm.reintegrationType === 'other' ? residentForm.reintegrationTypeOther : residentForm.reintegrationType,
       referralSource: residentForm.referralSource,
       referringAgency: residentForm.referringAgency,
       initialAssessment: residentForm.initialAssessment,
       admissionDate: residentForm.admissionDate,
       dateOfBirth: residentForm.dateOfBirth,
+      religion: residentForm.religion === 'other' ? residentForm.religionOther : residentForm.religion,
+      birthStatus: residentForm.birthStatus === 'other' ? residentForm.birthStatusOther : residentForm.birthStatus,
+      placeOfBirth: residentForm.placeOfBirth,
+      subCatOrphaned: residentForm.subCatOrphaned,
+      subCatTrafficked: residentForm.subCatTrafficked,
+      subCatChildLabor: residentForm.subCatChildLabor,
+      subCatPhysicalAbuse: residentForm.subCatPhysicalAbuse,
+      subCatSexualAbuse: residentForm.subCatSexualAbuse,
+      subCatOsaec: residentForm.subCatOsaec,
+      subCatCicl: residentForm.subCatCicl,
+      subCatAtRisk: residentForm.subCatAtRisk,
+      subCatStreetChild: residentForm.subCatStreetChild,
+      subCatChildWithHiv: residentForm.subCatChildWithHiv,
+      familyIs4ps: residentForm.familyIs4ps,
+      familySoloParent: residentForm.familySoloParent,
+      familyIndigenous: residentForm.familyIndigenous,
+      familyInformalSettler: residentForm.familyInformalSettler,
+      familyParentPwd: residentForm.familyParentPwd,
     }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['resident', id] });
@@ -301,28 +411,59 @@ export default function ResidentDetail() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <h1 className="text-2xl font-display font-bold text-foreground">{resident.internalCode}</h1>
-                  <p className="text-muted-foreground">{resident.safehouse} · Admitted {resident.admissionDate}</p>
+                  <p className="text-muted-foreground">{displaySafehouseName(resident.safehouse)} · Admitted {resident.admissionDate}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <StatusPill status={resident.caseStatus} />
                   <RiskBadge level={resident.riskLevel} />
                   <Button variant="outline" size="sm" onClick={() => {
+                    const sc = resident.caseSubcategories;
+                    const hasSub = (slug: string) => sc.some((c) => c.toLowerCase() === slug.toLowerCase());
+                    const sw = matchSelectOption(resident.assignedSocialWorker, socialWorkerOptions);
+                    const rs = matchSelectOption(resident.reintegrationStatus, reintStatusOptions);
+                    const rt = matchSelectOption(resident.reintegrationType, reintTypeOptions);
+                    const rel = matchSelectOption(resident.religion, religionOptions);
+                    const bs = matchSelectOption(resident.birthStatus, birthStatusOptions);
+                    const cc = matchSelectOption(resident.caseCategory, caseCategoryOptions);
                     setResidentForm({
                       caseControlNumber: resident.caseControlNumber,
                       internalCode: resident.internalCode,
                       safehouseName: resident.safehouse,
                       caseStatus: resident.caseStatus,
-                      caseCategory: ['trafficked', 'physical abuse', 'neglected', 'sexual abuse'].includes(resident.caseCategory.toLowerCase()) ? resident.caseCategory.toLowerCase() : 'other',
-                      caseCategoryOther: ['trafficked', 'physical abuse', 'neglected', 'sexual abuse'].includes(resident.caseCategory.toLowerCase()) ? '' : resident.caseCategory,
+                      caseCategory: cc.select === 'other' ? 'other' : cc.select,
+                      caseCategoryOther: cc.other,
                       riskLevel: resident.riskLevel,
-                      assignedSocialWorker: resident.assignedSocialWorker,
-                      reintegrationStatus: resident.reintegrationStatus,
-                      reintegrationType: resident.reintegrationType,
+                      assignedSocialWorker: sw.select === 'other' ? 'other' : sw.select,
+                      assignedSocialWorkerOther: sw.other,
+                      reintegrationStatus: rs.select === 'other' ? 'other' : rs.select,
+                      reintegrationStatusOther: rs.other,
+                      reintegrationType: rt.select === 'other' ? 'other' : rt.select,
+                      reintegrationTypeOther: rt.other,
                       referralSource: resident.referralSource,
                       referringAgency: resident.referringAgency,
                       initialAssessment: resident.initialAssessment,
                       admissionDate: resident.admissionDate,
                       dateOfBirth: resident.dateOfBirth,
+                      religion: rel.select === 'other' ? 'other' : rel.select,
+                      religionOther: rel.other,
+                      birthStatus: bs.select === 'other' ? 'other' : bs.select,
+                      birthStatusOther: bs.other,
+                      placeOfBirth: resident.placeOfBirth,
+                      subCatOrphaned: hasSub('orphaned'),
+                      subCatTrafficked: hasSub('trafficked'),
+                      subCatChildLabor: hasSub('child-labor'),
+                      subCatPhysicalAbuse: hasSub('physical-abuse'),
+                      subCatSexualAbuse: hasSub('sexual-abuse'),
+                      subCatOsaec: hasSub('OSAEC'),
+                      subCatCicl: hasSub('cicl'),
+                      subCatAtRisk: hasSub('at-risk'),
+                      subCatStreetChild: hasSub('street-child'),
+                      subCatChildWithHiv: hasSub('child-with-hiv'),
+                      familyIs4ps: resident.is4PsBeneficiary,
+                      familySoloParent: resident.isSoloParent,
+                      familyIndigenous: !!resident.indigenousGroup && resident.indigenousGroup !== 'N/A',
+                      familyInformalSettler: resident.isInformalSettler,
+                      familyParentPwd: resident.parentWithDisability,
                     });
                     setOpenResidentEdit(true);
                   }}>
@@ -369,7 +510,7 @@ export default function ResidentDetail() {
                 <CardHeader><CardTitle className="font-display text-lg">Case Categories</CardTitle></CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">{resident.caseCategory}</Badge>
+                    <Badge variant="secondary">{formatCaseCategoryLabel(resident.caseCategory)}</Badge>
                     {resident.caseSubcategories.map(cat => (
                       <Badge key={cat} variant="outline" className="capitalize">{cat.replace('-', ' ')}</Badge>
                     ))}
@@ -461,9 +602,6 @@ export default function ResidentDetail() {
                       )}
                       {s.concernsFlagged && (
                           <Badge className="bg-red-100 text-red-800 border-red-300">Concerns Flagged</Badge>
-                      )}
-                      {s.referralMade && (
-                          <Badge className="bg-blue-100 text-blue-800 border-blue-300">Referral Made</Badge>
                       )}
                     </div>                  </CardContent>
                 </Card>
@@ -645,30 +783,152 @@ export default function ResidentDetail() {
       </Dialog>
 
       <Dialog open={openResidentEdit} onOpenChange={setOpenResidentEdit}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader><DialogTitle className="font-display">Edit Resident Profile</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Case #</Label><Input value={residentForm.caseControlNumber} onChange={(e) => setResidentForm({ ...residentForm, caseControlNumber: e.target.value })} /></div>
-              <div><Label>Internal Code</Label><Input value={residentForm.internalCode} onChange={(e) => setResidentForm({ ...residentForm, internalCode: e.target.value })} /></div>
+        <DialogContent className="sm:max-w-4xl w-[min(100vw-2rem,56rem)] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+            <DialogTitle className="font-display">Edit resident profile</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto px-6 pb-4 flex-1 min-h-0 space-y-6">
+            <div className="grid gap-3">
+              <p className="text-sm font-medium text-foreground">Case &amp; placement</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label>Case #</Label><Input value={residentForm.caseControlNumber} onChange={(e) => setResidentForm({ ...residentForm, caseControlNumber: e.target.value })} /></div>
+                <div><Label>Internal code</Label><Input value={residentForm.internalCode} onChange={(e) => setResidentForm({ ...residentForm, internalCode: e.target.value })} /></div>
+              </div>
+              <EditableSelect
+                label="Safehouse"
+                value={residentForm.safehouseName}
+                customValue={residentForm.safehouseName}
+                options={safehouseOptions}
+                getOptionLabel={displaySafehouseName}
+                onChange={(v) => setResidentForm({ ...residentForm, safehouseName: v === 'other' ? '' : v })}
+                onCustomChange={(v) => setResidentForm({ ...residentForm, safehouseName: v })}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label>Status</Label><Select value={residentForm.caseStatus} onValueChange={(v) => setResidentForm({ ...residentForm, caseStatus: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">active</SelectItem><SelectItem value="closed">closed</SelectItem><SelectItem value="transferred">transferred</SelectItem></SelectContent></Select></div>
+                <div><Label>Risk</Label><Select value={residentForm.riskLevel} onValueChange={(v) => setResidentForm({ ...residentForm, riskLevel: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">low</SelectItem><SelectItem value="medium">medium</SelectItem><SelectItem value="high">high</SelectItem><SelectItem value="critical">critical</SelectItem></SelectContent></Select></div>
+              </div>
+              <EditableSelect
+                label="Case category"
+                value={residentForm.caseCategory}
+                customValue={residentForm.caseCategoryOther}
+                options={caseCategoryOptions}
+                getOptionLabel={formatCaseCategoryLabel}
+                onChange={(v) => setResidentForm({ ...residentForm, caseCategory: v })}
+                onCustomChange={(v) => setResidentForm({ ...residentForm, caseCategoryOther: v })}
+              />
+              <EditableSelect
+                label="Assigned social worker"
+                value={residentForm.assignedSocialWorker}
+                customValue={residentForm.assignedSocialWorkerOther}
+                options={socialWorkerOptions}
+                onChange={(v) => setResidentForm({ ...residentForm, assignedSocialWorker: v })}
+                onCustomChange={(v) => setResidentForm({ ...residentForm, assignedSocialWorkerOther: v })}
+              />
             </div>
-            <div><Label>Safehouse (exact)</Label><Input value={residentForm.safehouseName} onChange={(e) => setResidentForm({ ...residentForm, safehouseName: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Status</Label><Select value={residentForm.caseStatus} onValueChange={(v) => setResidentForm({ ...residentForm, caseStatus: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">active</SelectItem><SelectItem value="closed">closed</SelectItem><SelectItem value="transferred">transferred</SelectItem></SelectContent></Select></div>
-              <div><Label>Risk</Label><Select value={residentForm.riskLevel} onValueChange={(v) => setResidentForm({ ...residentForm, riskLevel: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">low</SelectItem><SelectItem value="medium">medium</SelectItem><SelectItem value="high">high</SelectItem><SelectItem value="critical">critical</SelectItem></SelectContent></Select></div>
+            <div className="grid gap-3">
+              <p className="text-sm font-medium text-foreground">Demographics</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label>Date of birth</Label><Input type="date" value={residentForm.dateOfBirth} onChange={(e) => setResidentForm({ ...residentForm, dateOfBirth: e.target.value })} /></div>
+                <div><Label>Admission date</Label><Input type="date" value={residentForm.admissionDate} onChange={(e) => setResidentForm({ ...residentForm, admissionDate: e.target.value })} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <EditableSelect
+                  label="Religion"
+                  value={residentForm.religion}
+                  customValue={residentForm.religionOther}
+                  options={religionOptions}
+                  onChange={(v) => setResidentForm({ ...residentForm, religion: v })}
+                  onCustomChange={(v) => setResidentForm({ ...residentForm, religionOther: v })}
+                />
+                <EditableSelect
+                  label="Birth status"
+                  value={residentForm.birthStatus}
+                  customValue={residentForm.birthStatusOther}
+                  options={birthStatusOptions}
+                  onChange={(v) => setResidentForm({ ...residentForm, birthStatus: v })}
+                  onCustomChange={(v) => setResidentForm({ ...residentForm, birthStatusOther: v })}
+                />
+              </div>
+              <div><Label>Place of birth</Label><Input value={residentForm.placeOfBirth} onChange={(e) => setResidentForm({ ...residentForm, placeOfBirth: e.target.value })} /></div>
             </div>
-            <div><Label>Case Category</Label><Select value={residentForm.caseCategory} onValueChange={(v) => setResidentForm({ ...residentForm, caseCategory: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="trafficked">trafficked</SelectItem><SelectItem value="physical abuse">physical abuse</SelectItem><SelectItem value="sexual abuse">sexual abuse</SelectItem><SelectItem value="neglected">neglected</SelectItem><SelectItem value="other">other</SelectItem></SelectContent></Select></div>
-            {residentForm.caseCategory === 'other' && <div><Label>New Category</Label><Input value={residentForm.caseCategoryOther} onChange={(e) => setResidentForm({ ...residentForm, caseCategoryOther: e.target.value })} /></div>}
-            <div><Label>Assigned Social Worker</Label><Input value={residentForm.assignedSocialWorker} onChange={(e) => setResidentForm({ ...residentForm, assignedSocialWorker: e.target.value })} /></div>
-            <div><Label>Reintegration Status</Label><Input value={residentForm.reintegrationStatus} onChange={(e) => setResidentForm({ ...residentForm, reintegrationStatus: e.target.value })} /></div>
-            <div><Label>Reintegration Type</Label><Input value={residentForm.reintegrationType} onChange={(e) => setResidentForm({ ...residentForm, reintegrationType: e.target.value })} /></div>
-            <div><Label>Referral Source</Label><Input value={residentForm.referralSource} onChange={(e) => setResidentForm({ ...residentForm, referralSource: e.target.value })} /></div>
-            <div><Label>Referring Agency</Label><Input value={residentForm.referringAgency} onChange={(e) => setResidentForm({ ...residentForm, referringAgency: e.target.value })} /></div>
-            <div><Label>Admission Date</Label><Input type="date" value={residentForm.admissionDate} onChange={(e) => setResidentForm({ ...residentForm, admissionDate: e.target.value })} /></div>
-            <div><Label>Date of Birth</Label><Input type="date" value={residentForm.dateOfBirth} onChange={(e) => setResidentForm({ ...residentForm, dateOfBirth: e.target.value })} /></div>
-            <div><Label>Initial Assessment</Label><Textarea value={residentForm.initialAssessment} onChange={(e) => setResidentForm({ ...residentForm, initialAssessment: e.target.value })} /></div>
+            <div className="grid gap-2">
+              <p className="text-sm font-medium text-foreground">Case subcategories</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                {([
+                  ['subCatOrphaned', 'Orphaned'],
+                  ['subCatTrafficked', 'Trafficked'],
+                  ['subCatChildLabor', 'Child labor'],
+                  ['subCatPhysicalAbuse', 'Physical abuse'],
+                  ['subCatSexualAbuse', 'Sexual abuse'],
+                  ['subCatOsaec', 'OSAEC / CSAEM'],
+                  ['subCatCicl', 'CICL'],
+                  ['subCatAtRisk', 'At risk'],
+                  ['subCatStreetChild', 'Street child'],
+                  ['subCatChildWithHiv', 'Child with HIV'],
+                ] as const).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={residentForm[key]}
+                      onChange={(e) => setResidentForm({ ...residentForm, [key]: e.target.checked })}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <p className="text-sm font-medium text-foreground">Family profile</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                {([
+                  ['familyIs4ps', '4Ps beneficiary'],
+                  ['familySoloParent', 'Solo parent'],
+                  ['familyIndigenous', 'Indigenous group'],
+                  ['familyInformalSettler', 'Informal settler'],
+                  ['familyParentPwd', 'Parent with disability'],
+                ] as const).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={residentForm[key]}
+                      onChange={(e) => setResidentForm({ ...residentForm, [key]: e.target.checked })}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-3">
+              <p className="text-sm font-medium text-foreground">Referral &amp; reintegration</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label>Referral source</Label><Input value={residentForm.referralSource} onChange={(e) => setResidentForm({ ...residentForm, referralSource: e.target.value })} /></div>
+                <div><Label>Referring agency / person</Label><Input value={residentForm.referringAgency} onChange={(e) => setResidentForm({ ...residentForm, referringAgency: e.target.value })} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <EditableSelect
+                  label="Reintegration status"
+                  value={residentForm.reintegrationStatus}
+                  customValue={residentForm.reintegrationStatusOther}
+                  options={reintStatusOptions}
+                  onChange={(v) => setResidentForm({ ...residentForm, reintegrationStatus: v })}
+                  onCustomChange={(v) => setResidentForm({ ...residentForm, reintegrationStatusOther: v })}
+                />
+                <EditableSelect
+                  label="Reintegration type"
+                  value={residentForm.reintegrationType}
+                  customValue={residentForm.reintegrationTypeOther}
+                  options={reintTypeOptions}
+                  onChange={(v) => setResidentForm({ ...residentForm, reintegrationType: v })}
+                  onCustomChange={(v) => setResidentForm({ ...residentForm, reintegrationTypeOther: v })}
+                />
+              </div>
+              <div><Label>Initial assessment</Label><Textarea rows={4} value={residentForm.initialAssessment} onChange={(e) => setResidentForm({ ...residentForm, initialAssessment: e.target.value })} /></div>
+            </div>
+          </div>
+          <div className="border-t px-6 py-4 shrink-0 flex justify-end gap-2 bg-muted/30">
+            <Button variant="outline" onClick={() => setOpenResidentEdit(false)}>Cancel</Button>
             <Button onClick={() => updateResidentMutation.mutate()} disabled={updateResidentMutation.isPending || !residentForm.caseControlNumber || !residentForm.internalCode || !residentForm.safehouseName}>
-              {updateResidentMutation.isPending ? 'Saving...' : 'Save Resident'}
+              {updateResidentMutation.isPending ? 'Saving...' : 'Save resident'}
             </Button>
           </div>
         </DialogContent>

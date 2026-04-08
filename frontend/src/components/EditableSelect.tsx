@@ -10,6 +10,8 @@ interface EditableSelectProps {
   onChange: (value: string) => void;
   onCustomChange: (value: string) => void;
   placeholder?: string;
+  /** When set, options are shown with this label while the stored value stays the option string. */
+  getOptionLabel?: (option: string) => string;
 }
 
 export function EditableSelect({
@@ -20,6 +22,7 @@ export function EditableSelect({
   onChange,
   onCustomChange,
   placeholder = 'Select a value',
+  getOptionLabel,
 }: EditableSelectProps) {
   const normalized = value.trim().toLowerCase();
   const known = options.some((opt) => opt.trim().toLowerCase() === normalized);
@@ -35,7 +38,7 @@ export function EditableSelect({
         <SelectContent>
           {options.map((option) => (
             <SelectItem key={option} value={option}>
-              {option}
+              {getOptionLabel ? getOptionLabel(option) : option}
             </SelectItem>
           ))}
           <SelectItem value="other">Other (type new value)</SelectItem>

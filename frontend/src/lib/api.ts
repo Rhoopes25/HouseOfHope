@@ -26,7 +26,11 @@ export async function apiFetch<T>(endpoint: string, options?: RequestInit): Prom
   if (!response.ok) {
     throw new Error(`API Error: ${response.status} ${response.statusText}`);
   }
-  return response.json();
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+  return JSON.parse(text) as T;
 }
 
 export { API_BASE_URL };

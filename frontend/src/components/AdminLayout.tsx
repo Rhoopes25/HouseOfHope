@@ -20,12 +20,12 @@ import {
 import { SiteFooter } from '@/components/SiteFooter';
 
 const adminNav = [
-  { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+  { title: 'Overview', url: '/admin', icon: LayoutDashboard },
   { title: 'Caseload', url: '/admin/caseload', icon: Users },
-  { title: 'Visitations & Conferences', url: '/admin/field-ops', icon: MapPinned },
+  { title: 'Visitations & conferences', url: '/admin/field-ops', icon: MapPinned },
   { title: 'Donors', url: '/admin/donors', icon: HandCoins },
-  { title: 'Reports', url: '/admin/reports', icon: BarChart3 },
-  { title: 'Social Media', url: '/admin/social-media', icon: Share2 },
+  { title: 'Reports (ML)', url: '/admin/reports', icon: BarChart3 },
+  { title: 'Social (ML)', url: '/admin/social-media', icon: Share2 },
 ];
 
 function AdminSidebarContent() {

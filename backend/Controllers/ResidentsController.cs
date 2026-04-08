@@ -62,7 +62,25 @@ public class ResidentsController : ControllerBase
             DateOfBirth = request.DateOfBirth,
             ReferralSource = request.ReferralSource,
             ReferringAgencyPerson = request.ReferringAgency,
-            InitialCaseAssessment = request.InitialAssessment
+            InitialCaseAssessment = request.InitialAssessment,
+            Religion = request.Religion,
+            BirthStatus = request.BirthStatus,
+            PlaceOfBirth = request.PlaceOfBirth,
+            SubCatOrphaned = B(request.SubCatOrphaned),
+            SubCatTrafficked = B(request.SubCatTrafficked),
+            SubCatChildLabor = B(request.SubCatChildLabor),
+            SubCatPhysicalAbuse = B(request.SubCatPhysicalAbuse),
+            SubCatSexualAbuse = B(request.SubCatSexualAbuse),
+            SubCatOsaec = B(request.SubCatOsaec),
+            SubCatCicl = B(request.SubCatCicl),
+            SubCatAtRisk = B(request.SubCatAtRisk),
+            SubCatStreetChild = B(request.SubCatStreetChild),
+            SubCatChildWithHiv = B(request.SubCatChildWithHiv),
+            FamilyIs4ps = B(request.FamilyIs4ps),
+            FamilySoloParent = B(request.FamilySoloParent),
+            FamilyIndigenous = B(request.FamilyIndigenous),
+            FamilyInformalSettler = B(request.FamilyInformalSettler),
+            FamilyParentPwd = B(request.FamilyParentPwd)
         };
 
         _db.Residents.Add(entity);
@@ -99,6 +117,24 @@ public class ResidentsController : ControllerBase
         entity.ReferralSource = request.ReferralSource;
         entity.ReferringAgencyPerson = request.ReferringAgency;
         entity.InitialCaseAssessment = request.InitialAssessment;
+        entity.Religion = request.Religion;
+        entity.BirthStatus = request.BirthStatus;
+        entity.PlaceOfBirth = request.PlaceOfBirth;
+        entity.SubCatOrphaned = B(request.SubCatOrphaned);
+        entity.SubCatTrafficked = B(request.SubCatTrafficked);
+        entity.SubCatChildLabor = B(request.SubCatChildLabor);
+        entity.SubCatPhysicalAbuse = B(request.SubCatPhysicalAbuse);
+        entity.SubCatSexualAbuse = B(request.SubCatSexualAbuse);
+        entity.SubCatOsaec = B(request.SubCatOsaec);
+        entity.SubCatCicl = B(request.SubCatCicl);
+        entity.SubCatAtRisk = B(request.SubCatAtRisk);
+        entity.SubCatStreetChild = B(request.SubCatStreetChild);
+        entity.SubCatChildWithHiv = B(request.SubCatChildWithHiv);
+        entity.FamilyIs4ps = B(request.FamilyIs4ps);
+        entity.FamilySoloParent = B(request.FamilySoloParent);
+        entity.FamilyIndigenous = B(request.FamilyIndigenous);
+        entity.FamilyInformalSettler = B(request.FamilyInformalSettler);
+        entity.FamilyParentPwd = B(request.FamilyParentPwd);
 
         await _db.SaveChangesAsync(ct);
         return NoContent();
@@ -114,6 +150,13 @@ public class ResidentsController : ControllerBase
 
         var entity = await _db.Residents.FirstOrDefaultAsync(r => r.ResidentId == id, ct);
         if (entity == null) return NotFound();
+
+        // Delete dependent rows first (FKs do not cascade in this model).
+        await _db.ProcessRecordings.Where(p => p.ResidentId == id).ExecuteDeleteAsync(ct);
+        await _db.HomeVisitations.Where(v => v.ResidentId == id).ExecuteDeleteAsync(ct);
+        await _db.InterventionPlans.Where(p => p.ResidentId == id).ExecuteDeleteAsync(ct);
+        await _db.EducationRecords.Where(e => e.ResidentId == id).ExecuteDeleteAsync(ct);
+        await _db.HealthWellbeingRecords.Where(h => h.ResidentId == id).ExecuteDeleteAsync(ct);
 
         _db.Residents.Remove(entity);
         await _db.SaveChangesAsync(ct);
@@ -487,6 +530,8 @@ public class ResidentsController : ControllerBase
         return null;
     }
 
+    private static int B(bool v) => v ? 1 : 0;
+
     private static string? MapPlanStatusToEntity(string? status) => status switch
     {
         "pending" => "Open",
@@ -514,6 +559,24 @@ public class UpsertResidentRequest
     public string? ReferralSource { get; set; }
     public string? ReferringAgency { get; set; }
     public string? InitialAssessment { get; set; }
+    public string? Religion { get; set; }
+    public string? BirthStatus { get; set; }
+    public string? PlaceOfBirth { get; set; }
+    public bool SubCatOrphaned { get; set; }
+    public bool SubCatTrafficked { get; set; }
+    public bool SubCatChildLabor { get; set; }
+    public bool SubCatPhysicalAbuse { get; set; }
+    public bool SubCatSexualAbuse { get; set; }
+    public bool SubCatOsaec { get; set; }
+    public bool SubCatCicl { get; set; }
+    public bool SubCatAtRisk { get; set; }
+    public bool SubCatStreetChild { get; set; }
+    public bool SubCatChildWithHiv { get; set; }
+    public bool FamilyIs4ps { get; set; }
+    public bool FamilySoloParent { get; set; }
+    public bool FamilyIndigenous { get; set; }
+    public bool FamilyInformalSettler { get; set; }
+    public bool FamilyParentPwd { get; set; }
 }
 
 public class CreateCounselingSessionRequest

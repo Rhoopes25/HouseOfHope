@@ -153,7 +153,7 @@ export const updateDonation = (id: string, payload: {
 }) => apiFetch<void>(`/Donations/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
 export const deleteDonation = (id: string) => apiFetch<void>(`/Donations/${id}?confirm=true`, { method: 'DELETE' });
 
-export const createResident = (payload: {
+export type ResidentUpsertPayload = {
   caseControlNumber: string;
   internalCode: string;
   safehouseName: string;
@@ -168,31 +168,33 @@ export const createResident = (payload: {
   referralSource?: string;
   referringAgency?: string;
   initialAssessment?: string;
-}) =>
+  religion?: string;
+  birthStatus?: string;
+  placeOfBirth?: string;
+  subCatOrphaned?: boolean;
+  subCatTrafficked?: boolean;
+  subCatChildLabor?: boolean;
+  subCatPhysicalAbuse?: boolean;
+  subCatSexualAbuse?: boolean;
+  subCatOsaec?: boolean;
+  subCatCicl?: boolean;
+  subCatAtRisk?: boolean;
+  subCatStreetChild?: boolean;
+  subCatChildWithHiv?: boolean;
+  familyIs4ps?: boolean;
+  familySoloParent?: boolean;
+  familyIndigenous?: boolean;
+  familyInformalSettler?: boolean;
+  familyParentPwd?: boolean;
+};
+
+export const createResident = (payload: ResidentUpsertPayload) =>
   apiFetch<Resident>('/Residents', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 
-export const updateResident = (
-  id: string,
-  payload: {
-    caseControlNumber: string;
-    internalCode: string;
-    safehouseName: string;
-    caseStatus: string;
-    caseCategory: string;
-    riskLevel: string;
-    assignedSocialWorker: string;
-    reintegrationStatus?: string;
-    reintegrationType?: string;
-    admissionDate?: string;
-    dateOfBirth?: string;
-    referralSource?: string;
-    referringAgency?: string;
-    initialAssessment?: string;
-  },
-) =>
+export const updateResident = (id: string, payload: ResidentUpsertPayload) =>
   apiFetch<void>(`/Residents/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
