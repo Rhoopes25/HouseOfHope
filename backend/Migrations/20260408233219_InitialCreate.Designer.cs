@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HouseOfHope.API.Migrations
 {
     [DbContext(typeof(LighthouseDbContext))]
-    [Migration("20260408175238_InitialLighthouse")]
-    partial class InitialLighthouse
+    [Migration("20260408233219_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
