@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using CsvHelper;
 using CsvHelper.Configuration;
+using CsvHelper.TypeConversion;
 using Microsoft.EntityFrameworkCore;
 
 namespace HouseOfHope.API.Data;
@@ -80,6 +81,7 @@ public static class DataSeeder
         };
         using var reader = new StreamReader(filePath);
         using var csv = new CsvReader(reader, config);
+        csv.Context.TypeConverterCache.AddConverter<int>(new Int32BooleanConverter());
         return csv.GetRecords<T>().ToList();
     }
 
@@ -104,5 +106,22 @@ public static class DataSeeder
                 Console.WriteLine($"DIAGNOSTIC: Inner exception: {ex.InnerException.Message}");
             throw;
         }
+    }
+}
+
+/// <summary>Parses CSV ints as numbers, or True/False/blank as 1/0/0 (common in exported spreadsheets).</summary>
+public sealed class Int32BooleanConverter : Int32Converter
+{
+    public override object? ConvertFromString(string? text, IReaderRow row, MemberMapData memberMapData)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 0;
+
+        if (string.Equals(text, "True", StringComparison.OrdinalIgnoreCase))
+            return 1;
+        if (string.Equals(text, "False", StringComparison.OrdinalIgnoreCase))
+            return 0;
+
+        return base.ConvertFromString(text, row, memberMapData);
     }
 }
