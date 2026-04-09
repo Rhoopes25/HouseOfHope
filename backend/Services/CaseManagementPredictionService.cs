@@ -19,13 +19,14 @@ public sealed class CaseManagementPredictionResult
     public List<string> RecommendedActions { get; set; } = [];
 }
 
-public sealed class CaseManagementPredictionService
+public sealed class CaseManagementPredictionService : IDisposable
 {
     private readonly LighthouseDbContext _db;
     private readonly ILogger<CaseManagementPredictionService> _logger;
     private readonly InferenceSession? _riskSession;
     private readonly InferenceSession? _reintegrationSession;
     private readonly bool _modelsAvailable;
+    private bool _disposed;
 
     private const string RiskModelName = "case_risk_escalation.onnx";
     private const string ReintegrationModelName = "case_reintegration_success.onnx";
@@ -351,5 +352,22 @@ public sealed class CaseManagementPredictionService
             ReintegrationLikelyWithin90d = false,
             RecommendedActions = ["Case model is unavailable. Check ONNX model files and startup logs."]
         };
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+        if (disposing)
+        {
+            _riskSession?.Dispose();
+            _reintegrationSession?.Dispose();
+        }
+        _disposed = true;
     }
 }
