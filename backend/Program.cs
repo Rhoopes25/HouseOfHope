@@ -157,8 +157,7 @@ using (var scope = app.Services.CreateScope())
         // PRODUCTION: intentionally no startup DB work to keep boot fast and reliable.
         // If you ever need one-time reseed/reinit, temporarily uncomment:
         // await appDb.Database.MigrateAsync();
-        DataSeeder.Seed(appDb, app.Environment.ContentRootPath);
-        // TODO: Add public impact snapshot seeding
+        // DataSeeder.Seed(appDb, app.Environment.ContentRootPath);
         // await identityDb.Database.MigrateAsync();
         // await AuthIdentityGenerator.GenerateDefaultIdentityAsync(services, app.Configuration);
     }
