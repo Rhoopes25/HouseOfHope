@@ -426,7 +426,7 @@ export default function DonorsContributions() {
     return (
       <div className="space-y-2">
         <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-2">
-          <HandCoins className="h-8 w-8 text-primary shrink-0" />
+          <HandCoins className="h-8 w-8 text-primary shrink-0" aria-hidden="true" />
           Donors &amp; Contributions
         </h1>
         <p className="text-destructive text-sm">Could not load data from the API.</p>
@@ -462,7 +462,7 @@ export default function DonorsContributions() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-2">
-          <HandCoins className="h-8 w-8 text-primary shrink-0" />
+          <HandCoins className="h-8 w-8 text-primary shrink-0" aria-hidden="true" />
           Donors &amp; Contributions
         </h1>
         <div className="flex gap-2 flex-wrap">
@@ -482,7 +482,7 @@ export default function DonorsContributions() {
 
       <div className="flex flex-col lg:flex-row flex-wrap gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <Input
             placeholder="Search donors..."
             className="pl-10 min-w-[260px] lg:min-w-[360px]"
@@ -648,10 +648,10 @@ export default function DonorsContributions() {
                           setDonorDialogOpen(true);
                         }}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => setDeleteDonorTarget(s)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                       </Button>
                     </div>
                   </TableCell>
@@ -756,10 +756,10 @@ export default function DonorsContributions() {
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openDonationForEdit(d, false)}>
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-4 w-4" aria-hidden="true" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => setDeleteDonationTarget(d)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                         </Button>
                       </div>
                     </TableCell>
@@ -811,10 +811,10 @@ export default function DonorsContributions() {
                           openDonationForEdit(d);
                         }}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => setDeleteDonationTarget(d)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                       </Button>
                     </div>
                   </div>
