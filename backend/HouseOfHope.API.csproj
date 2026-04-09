@@ -20,10 +20,13 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.4" />
   </ItemGroup>
 
-<ItemGroup>
+  <ItemGroup>
     <None Update="SeedData\*.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Models\*.onnx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
-  
+
 </Project>
