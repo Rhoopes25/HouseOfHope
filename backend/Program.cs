@@ -78,10 +78,19 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.Lax;
-    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-        ? CookieSecurePolicy.SameAsRequest
-        : CookieSecurePolicy.Always;
+    if (builder.Environment.IsDevelopment())
+    {
+        // Dev: Vite proxies /api to Kestrel — same site as the browser URL, Lax is fine.
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    }
+    else
+    {
+        // Production: SPA on another host (e.g. Static Web Apps) calls the API cross-origin with credentials.
+        // Browsers do not send SameSite=Lax cookies on those requests; None + Secure is required.
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    }
     options.ExpireTimeSpan = TimeSpan.FromDays(7);
     options.SlidingExpiration = true;
 });
@@ -110,29 +119,29 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var appDb = scope.ServiceProvider.GetRequiredService<LighthouseDbContext>();
+    var services = scope.ServiceProvider;
+    var appDb = services.GetRequiredService<LighthouseDbContext>();
+    var identityDb = services.GetRequiredService<AuthIdentityDbContext>();
+
     if (app.Environment.IsDevelopment())
     {
         // In local SQLite dev, schema may already exist without matching EF migration history.
         // EnsureCreated avoids PendingModelChanges/table-exists startup crashes.
         appDb.Database.EnsureCreated();
-    }
-    else
-    {
-        appDb.Database.Migrate();
-        DataSeeder.Seed(appDb, app.Environment.ContentRootPath);
-    }
-
-    var identityDb = scope.ServiceProvider.GetRequiredService<AuthIdentityDbContext>();
-    if (app.Environment.IsDevelopment())
-    {
         identityDb.Database.EnsureCreated();
+
+        // Keep local development easy mode for seeded auth users/roles.
+        await AuthIdentityGenerator.GenerateDefaultIdentityAsync(services, app.Configuration);
     }
     else
     {
-        await identityDb.Database.MigrateAsync();
+        // PRODUCTION: intentionally no startup DB work to keep boot fast and reliable.
+        // If you ever need one-time reseed/reinit, temporarily uncomment:
+        // await appDb.Database.MigrateAsync();
+        // DataSeeder.Seed(appDb, app.Environment.ContentRootPath);
+        // await identityDb.Database.MigrateAsync();
+        // await AuthIdentityGenerator.GenerateDefaultIdentityAsync(services, app.Configuration);
     }
-    await AuthIdentityGenerator.GenerateDefaultIdentityAsync(scope.ServiceProvider, app.Configuration);
 }
 
 if (app.Environment.IsDevelopment())

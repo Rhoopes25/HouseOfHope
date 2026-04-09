@@ -9,7 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   hasRole: (role: UserRole) => boolean;
-  refreshAuth: () => Promise<void>;
+  refreshAuth: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,24 +25,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return 'public';
   };
 
-  const refreshAuth = useCallback(async () => {
+  const refreshAuth = useCallback(async (): Promise<boolean> => {
     try {
       const session = await getAuthSession();
       if (!session.isAuthenticated) {
         setUser(null);
         setSessionRoles([]);
-      } else {
-        setSessionRoles(session.roles);
-        setUser({
-          id: session.email ?? session.userName ?? 'session-user',
-          username: session.email ?? session.userName ?? '',
-          displayName: session.supporterDisplayName ?? session.userName ?? session.email ?? 'User',
-          role: mapRole(session.roles),
-        });
+        return false;
       }
+      setSessionRoles(session.roles);
+      setUser({
+        id: session.email ?? session.userName ?? 'session-user',
+        username: session.email ?? session.userName ?? '',
+        displayName: session.supporterDisplayName ?? session.userName ?? session.email ?? 'User',
+        role: mapRole(session.roles),
+      });
+      return true;
     } catch {
       setUser(null);
       setSessionRoles([]);
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     try {
       await loginUser(username, password);
-      await refreshAuth();
+      const ok = await refreshAuth();
+      if (!ok) {
+        return {
+          success: false,
+          error:
+            'Login did not keep you signed in. If the API is on a different domain than this site, the server must use SameSite=None and Secure for auth cookies, and CORS must allow this origin with credentials.',
+        };
+      }
       return { success: true };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Login failed' };
