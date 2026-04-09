@@ -47,7 +47,7 @@ export interface Resident {
   indigenousGroup: string;
   isInformalSettler: boolean;
   parentWithDisability: boolean;
-  reintegrationReadinessScore: number;
+  reintegrationReadinessScore: number | null;
   casePrediction?: CaseManagementPrediction | null;
 }
 

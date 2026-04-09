@@ -74,9 +74,13 @@ public static class HouseOfHopeMapper
     public static string MapSessionType(string? raw) =>
         string.Equals(raw, "Group", StringComparison.OrdinalIgnoreCase) ? "group" : "individual";
 
-    public static async Task<Dictionary<int, int>> GetReadinessScoresAsync(LighthouseDbContext db, List<int> ids)
+    public static async Task<Dictionary<int, int?>> GetReadinessScoresAsync(LighthouseDbContext db, List<int> ids)
     {
-        if (ids.Count == 0) return new Dictionary<int, int>();
+        if (ids.Count == 0) return new Dictionary<int, int?>();
+        var residents = await db.Residents.AsNoTracking()
+            .Where(r => ids.Contains(r.ResidentId))
+            .Select(r => new { r.ResidentId, r.ReintegrationStatus })
+            .ToListAsync();
         var eduRows = await db.EducationRecords.AsNoTracking()
             .Where(e => ids.Contains(e.ResidentId))
             .ToListAsync();
@@ -84,25 +88,41 @@ public static class HouseOfHopeMapper
             .Where(h => ids.Contains(h.ResidentId))
             .ToListAsync();
 
-        var dict = new Dictionary<int, int>();
+        var dict = new Dictionary<int, int?>();
         foreach (var id in ids)
         {
+            var residentStatus = residents.FirstOrDefault(r => r.ResidentId == id)?.ReintegrationStatus;
+            if (string.Equals(residentStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+            {
+                dict[id] = 100;
+                continue;
+            }
+
             var eProg = eduRows.Where(x => x.ResidentId == id)
                 .OrderByDescending(x => x.RecordDate ?? "")
                 .FirstOrDefault()?.ProgressPercent;
             var h = healthRows.Where(x => x.ResidentId == id)
                 .OrderByDescending(x => x.RecordDate ?? "")
                 .FirstOrDefault()?.GeneralHealthScore;
-            var eduScore = eProg ?? 50.0;
-            var healthScore = h.HasValue ? h.Value / 5.0 * 100.0 : 50.0;
-            dict[id] = (int)Math.Clamp(Math.Round((eduScore + healthScore) / 2.0), 0, 100);
+
+            // If there is no evidence yet, return null instead of a synthetic midpoint.
+            if (!eProg.HasValue && !h.HasValue)
+            {
+                dict[id] = null;
+                continue;
+            }
+
+            var componentScores = new List<double>();
+            if (eProg.HasValue) componentScores.Add(eProg.Value);
+            if (h.HasValue) componentScores.Add(h.Value / 5.0 * 100.0);
+            dict[id] = (int)Math.Clamp(Math.Round(componentScores.Average()), 0, 100);
         }
         return dict;
     }
 
     public static ResidentDto ToResidentDto(
         Resident r,
-        int readiness,
+        int? readiness,
         CaseManagementPredictionResult? prediction = null)
     {
         return new ResidentDto

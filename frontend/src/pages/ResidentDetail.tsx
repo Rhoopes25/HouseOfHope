@@ -30,7 +30,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -603,14 +602,6 @@ export default function ResidentDetail() {
                     <Trash2 className="h-4 w-4 mr-1" /> Delete
                   </Button>
                 </div>
-              </div>
-              <div className="mt-4">
-                <p className="text-sm text-muted-foreground mb-1">Reintegration Readiness Score</p>
-                <div className="flex items-center gap-3">
-                  <Progress value={resident.reintegrationReadinessScore} className="flex-1 h-3" />
-                  <span className="text-sm font-semibold text-primary">{resident.reintegrationReadinessScore}%</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Derived from latest education and health records in the database</p>
               </div>
               <div className="mt-4 border rounded-lg p-3 bg-muted/20">
                 <p className="text-sm font-medium text-foreground">Case Management Prediction</p>

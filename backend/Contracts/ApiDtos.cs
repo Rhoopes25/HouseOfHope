@@ -26,7 +26,7 @@ public class ResidentDto
     public string IndigenousGroup { get; set; } = "";
     public bool IsInformalSettler { get; set; }
     public bool ParentWithDisability { get; set; }
-    public int ReintegrationReadinessScore { get; set; }
+    public int? ReintegrationReadinessScore { get; set; }
     public CaseManagementPredictionDto? CasePrediction { get; set; }
 }
 

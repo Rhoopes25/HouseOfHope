@@ -102,16 +102,32 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:3000",
-                "http://127.0.0.1:3000",
-                "https://localhost:3000",
-                "https://127.0.0.1:3000",
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "https://localhost:5173",
-                "https://127.0.0.1:5173",
-                "https://polite-bush-0e7f0950f.1.azurestaticapps.net")
+        var defaultOrigins = new[]
+        {
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://localhost:3000",
+            "https://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://localhost:5173",
+            "https://127.0.0.1:5173",
+            "https://polite-bush-0e7f0950f.1.azurestaticapps.net"
+        };
+        var configuredOrigins = builder.Configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>() ?? [];
+        var allowedOrigins = defaultOrigins
+            .Concat(configuredOrigins)
+            .Where(o => !string.IsNullOrWhiteSpace(o))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        policy.SetIsOriginAllowed(origin =>
+            allowedOrigins.Contains(origin) ||
+            (Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+             string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
+             uri.Host.EndsWith(".azurestaticapps.net", StringComparison.OrdinalIgnoreCase)))
             .AllowCredentials()
             .AllowAnyMethod()
             .AllowAnyHeader();
