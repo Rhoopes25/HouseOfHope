@@ -518,8 +518,8 @@ export default function ResidentDetail() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={() => navigate('/admin/caseload')} className="mb-2">
-        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Caseload
+      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2">
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
       {loading || !resident ? (
