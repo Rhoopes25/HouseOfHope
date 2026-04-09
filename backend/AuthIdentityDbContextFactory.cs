@@ -8,11 +8,11 @@ namespace HouseOfHope.API;
 
 /// <summary>
 /// Used by <c>dotnet ef</c> only. Defaults to Production (SQL Server) so migrations match Azure;
-/// set <c>ASPNETCORE_ENVIRONMENT=Development</c> to scaffold or update against SQLite.
+/// set <c>ASPNETCORE_ENVIRONMENT=Development</c> to scaffold against SQLite.
 /// </summary>
-public sealed class LighthouseDbContextFactory : IDesignTimeDbContextFactory<LighthouseDbContext>
+public sealed class AuthIdentityDbContextFactory : IDesignTimeDbContextFactory<AuthIdentityDbContext>
 {
-    public LighthouseDbContext CreateDbContext(string[] args)
+    public AuthIdentityDbContext CreateDbContext(string[] args)
     {
         var env = ResolveEnvironment(args);
 
@@ -23,21 +23,23 @@ public sealed class LighthouseDbContextFactory : IDesignTimeDbContextFactory<Lig
             .AddEnvironmentVariables()
             .Build();
 
-        var optionsBuilder = new DbContextOptionsBuilder<LighthouseDbContext>();
+        var optionsBuilder = new DbContextOptionsBuilder<AuthIdentityDbContext>();
 
         if (string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase))
         {
-            optionsBuilder.UseSqlite(config.GetConnectionString("Lighthouse"));
+            var identityConnection = config.GetConnectionString("IdentityConnection")
+                ?? "Data Source=houseofhope_identity.sqlite";
+            optionsBuilder.UseSqlite(identityConnection);
         }
         else
         {
             var cs = config.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException(
                     "DefaultConnection is missing. Set it in appsettings or ConnectionStrings__DefaultConnection.");
-            optionsBuilder.UseSqlServer(cs, sql => sql.MigrationsHistoryTable(EfMigrationHistory.LighthouseTable));
+            optionsBuilder.UseSqlServer(cs, sql => sql.MigrationsHistoryTable(EfMigrationHistory.IdentityTable));
         }
 
-        return new LighthouseDbContext(optionsBuilder.Options);
+        return new AuthIdentityDbContext(optionsBuilder.Options);
     }
 
     private static string ResolveEnvironment(string[] args)

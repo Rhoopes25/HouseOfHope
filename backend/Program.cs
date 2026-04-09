@@ -19,7 +19,9 @@ if (builder.Environment.IsDevelopment())
 else
 {
     builder.Services.AddDbContext<LighthouseDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        options.UseSqlServer(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            sql => sql.MigrationsHistoryTable(EfMigrationHistory.LighthouseTable)));
 }
 
 if (builder.Environment.IsDevelopment())
@@ -34,7 +36,9 @@ if (builder.Environment.IsDevelopment())
 else
 {
     builder.Services.AddDbContext<AuthIdentityDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        options.UseSqlServer(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            sql => sql.MigrationsHistoryTable(EfMigrationHistory.IdentityTable)));
 }
 
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
