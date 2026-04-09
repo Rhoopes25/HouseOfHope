@@ -68,6 +68,12 @@ public static class DataSeeder
             var donations = ReadCsv<Donation>(CsvPath(contentRootPath, "donations.csv"));
             SeedWithIdentityInsert(context, "donations", donations);
         }
+
+        if (!context.IncidentReports.Any() && File.Exists(CsvPath(contentRootPath, "incident_reports.csv")))
+        {
+            var incidentReports = ReadCsv<IncidentReport>(CsvPath(contentRootPath, "incident_reports.csv"));
+            SeedWithIdentityInsert(context, "incident_reports", incidentReports);
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
