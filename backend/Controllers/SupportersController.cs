@@ -12,6 +12,7 @@ namespace HouseOfHope.API.Controllers;
 [Route("api/[controller]")]
 public class SupportersController : ControllerBase
 {
+    private const string DeletedDonorName = "Deleted Donor";
     private readonly LighthouseDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
 
@@ -73,7 +74,6 @@ public class SupportersController : ControllerBase
                 adminEmails.Add(user.Email.Trim().ToLower());
             }
         }
-
         return list.Select(s =>
         {
             var emailKey = (s.Email ?? "").Trim().ToLower();
@@ -91,8 +91,8 @@ public class SupportersController : ControllerBase
         var entity = new Supporter
         {
             DisplayName = request.DisplayName,
-            SupporterType = request.SupporterType,
-            Status = request.Status,
+            SupporterType = NormalizeSupporterType(request.SupporterType),
+            Status = NormalizeSupporterStatus(request.Status),
             Country = request.Country,
             Region = request.Region,
             Email = request.Email,
@@ -101,17 +101,13 @@ public class SupportersController : ControllerBase
         };
         _db.Supporters.Add(entity);
         await _db.SaveChangesAsync(ct);
-        var hasLinkedLogin = !string.IsNullOrWhiteSpace(entity.Email) &&
-                             await _userManager.FindByEmailAsync(entity.Email) != null;
-        var hasAdminRole = false;
-        if (hasLinkedLogin && !string.IsNullOrWhiteSpace(entity.Email))
+        ApplicationUser? linkedUser = null;
+        if (!string.IsNullOrWhiteSpace(entity.Email))
         {
-            var linkedUser = await _userManager.FindByEmailAsync(entity.Email);
-            if (linkedUser != null)
-            {
-                hasAdminRole = await _userManager.IsInRoleAsync(linkedUser, AuthRoles.Admin);
-            }
+            linkedUser = await _userManager.FindByEmailAsync(entity.Email);
         }
+        var hasLinkedLogin = linkedUser != null;
+        var hasAdminRole = linkedUser != null && await _userManager.IsInRoleAsync(linkedUser, AuthRoles.Admin);
         return Created($"/api/supporters/{entity.SupporterId}", ToDto(entity, hasLinkedLogin, hasAdminRole));
     }
 
@@ -123,8 +119,8 @@ public class SupportersController : ControllerBase
         if (entity == null) return NotFound();
 
         entity.DisplayName = request.DisplayName;
-        entity.SupporterType = request.SupporterType;
-        entity.Status = request.Status;
+        entity.SupporterType = NormalizeSupporterType(request.SupporterType);
+        entity.Status = NormalizeSupporterStatus(request.Status);
         entity.Country = request.Country;
         entity.Region = request.Region;
         entity.Email = request.Email;
@@ -146,8 +142,37 @@ public class SupportersController : ControllerBase
 
         var entity = await _db.Supporters.FirstOrDefaultAsync(s => s.SupporterId == id, ct);
         if (entity == null) return NotFound();
+        Supporter? deletedDonor = await _db.Supporters
+            .FirstOrDefaultAsync(s => s.DisplayName == DeletedDonorName, ct);
+        if (deletedDonor == null)
+        {
+            deletedDonor = new Supporter
+            {
+                DisplayName = DeletedDonorName,
+                SupporterType = "MonetaryDonor",
+                Status = "Inactive",
+                AcquisitionChannel = "System"
+            };
+            _db.Supporters.Add(deletedDonor);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        if (entity.SupporterId == deletedDonor.SupporterId)
+        {
+            return BadRequest(new { message = "The Deleted Donor fallback record cannot be removed." });
+        }
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        var donationsToReassign = await _db.Donations
+            .Where(d => d.SupporterId == id)
+            .ToListAsync(ct);
+        foreach (var donation in donationsToReassign)
+        {
+            donation.SupporterId = deletedDonor.SupporterId;
+        }
         _db.Supporters.Remove(entity);
         await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         return NoContent();
     }
 
@@ -164,6 +189,22 @@ public class SupportersController : ControllerBase
         AcquisitionChannel = s.AcquisitionChannel ?? "",
         FirstDonationDate = s.FirstDonationDate ?? "",
         ChurnRisk = "medium"
+    };
+
+    private static string NormalizeSupporterStatus(string? raw) =>
+        string.Equals(raw, "inactive", StringComparison.OrdinalIgnoreCase)
+            ? "Inactive"
+            : "Active";
+
+    private static string NormalizeSupporterType(string? raw) => raw?.Trim().ToLowerInvariant() switch
+    {
+        "monetary" => "MonetaryDonor",
+        "in-kind" => "InKindDonor",
+        "volunteer" => "Volunteer",
+        "skills" => "SkillsContributor",
+        "social-media" => "SocialMediaAdvocate",
+        "partner" => "PartnerOrganization",
+        _ => raw ?? "MonetaryDonor"
     };
 }
 

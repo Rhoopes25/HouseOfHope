@@ -135,7 +135,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Admin Command Center</h1>
+          <h1 className="text-3xl font-display font-bold text-foreground">Admin Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Same data as Caseload and Donors: residents, donations, impact trends, and case conferences — refreshed
             together.

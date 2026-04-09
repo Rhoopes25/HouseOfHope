@@ -36,6 +36,7 @@ export function PublicNavbar() {
               {hasRole('donor') && (
                 <Button size="sm" variant="outline" onClick={() => navigate('/donor-portal')}>Donor Portal</Button>
               )}
+              <Button size="sm" variant="outline" onClick={() => navigate('/profile')}>Profile</Button>
               <Button size="sm" variant="ghost" onClick={handleLogout}>Logout</Button>
             </div>
           ) : (
@@ -62,6 +63,7 @@ export function PublicNavbar() {
             <>
               {hasRole('admin') && <Link to="/admin" className="block text-sm font-medium" onClick={() => setMobileOpen(false)}>Admin Dashboard</Link>}
               {hasRole('donor') && <Link to="/donor-portal" className="block text-sm font-medium" onClick={() => setMobileOpen(false)}>Donor Portal</Link>}
+              <Link to="/profile" className="block text-sm font-medium" onClick={() => setMobileOpen(false)}>Profile</Link>
               <button onClick={() => { void handleLogout(); setMobileOpen(false); }} className="block text-sm font-medium text-destructive">Logout</button>
             </>
           ) : (

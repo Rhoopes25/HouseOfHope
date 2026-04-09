@@ -7,7 +7,6 @@ import {
   deleteSupporter,
   fetchDonations,
   fetchSupporters,
-  fetchUnlinkedDonorLogins,
   promoteDonorToAdmin,
   updateDonation,
   updateSupporter,
@@ -24,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Search, Trash2, Pencil, HandCoins, ChevronDown } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, HandCoins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
@@ -34,12 +33,12 @@ import { compareDonationValue, compareRiskLevel, compareText } from '@/lib/table
 import { buildAdminDonationBody, type UiDonationType } from '@/lib/donationPayload';
 import { EditableSelect } from '@/components/EditableSelect';
 import { mergeDistinctOptions } from '@/lib/residentFieldOptions';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const donorTypeOptions = ['monetary', 'in-kind', 'volunteer', 'skills', 'social-media', 'partner', 'other'];
 const donationTypeOptions: UiDonationType[] = ['monetary', 'in-kind', 'time', 'skills', 'social-media'];
 const channelOptions = ['web portal', 'referral', 'event', 'social media', 'email', 'other'];
 const countrySeeds = ['Philippines', 'United States', 'Canada', 'United Kingdom', 'Australia', 'Japan', 'Singapore'];
+const campaignSourceSeeds = ['General Campaign', 'Holiday Drive', 'School Supplies', 'Medical Support', 'Emergency Response'];
 function sortStrings(a: string, b: string) {
   return a.localeCompare(b, undefined, { sensitivity: 'base' });
 }
@@ -86,6 +85,14 @@ function formatChannel(value: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function formatDonationTypeLabel(value: string): string {
+  return value
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function DonorsContributions() {
   const queryClient = useQueryClient();
   const supportersQ = useQuery({ queryKey: ['supporters'], queryFn: fetchSupporters });
@@ -95,7 +102,6 @@ export default function DonorsContributions() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [accessFilter, setAccessFilter] = useState<'all' | 'linked' | 'unlinked'>('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [channelFilter, setChannelFilter] = useState('all');
   const [churnRiskFilter, setChurnRiskFilter] = useState('all');
@@ -106,7 +112,7 @@ export default function DonorsContributions() {
   const [editingDonation, setEditingDonation] = useState<Donation | null>(null);
   const [deleteDonorTarget, setDeleteDonorTarget] = useState<Supporter | null>(null);
   const [deleteDonationTarget, setDeleteDonationTarget] = useState<Donation | null>(null);
-  const [donorLinkAdvancedOpen, setDonorLinkAdvancedOpen] = useState(false);
+  const [donationLockedSupporterId, setDonationLockedSupporterId] = useState<string | null>(null);
   const [saveDonorAndAddDonation, setSaveDonorAndAddDonation] = useState(false);
   const { toast } = useToast();
 
@@ -138,6 +144,10 @@ export default function DonorsContributions() {
   const normalizedSupporters = useMemo(
     () => [...supporters].sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' })),
     [supporters],
+  );
+  const donationSelectableSupporters = useMemo(
+    () => normalizedSupporters.filter((s) => s.displayName.trim().toLowerCase() !== 'deleted donor'),
+    [normalizedSupporters],
   );
   const donorTypeValues = useMemo(
     () => [...new Set([...donorTypeOptions, ...supporters.map((s) => s.supporterType)])].sort(sortStrings),
@@ -184,18 +194,18 @@ export default function DonorsContributions() {
     () => [...donations].sort((a, b) => (b.date || '').localeCompare(a.date || '') || Number(b.id) - Number(a.id)),
     [donations],
   );
+  const campaignSourceOptions = useMemo(
+    () => mergeDistinctOptions(donations.map((d) => d.campaignName).filter(Boolean) as string[], campaignSourceSeeds),
+    [donations],
+  );
 
   const filteredDonors = supporters.filter((s) => {
     const matchesSearch = s.displayName.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-    const matchesAccess =
-      accessFilter === 'all' ||
-      (accessFilter === 'linked' && !!s.hasLinkedLogin) ||
-      (accessFilter === 'unlinked' && !s.hasLinkedLogin);
     const matchesCountry = countryFilter === 'all' || canonicalCountryKey(s.country || '') === countryFilter;
     const matchesChannel = channelFilter === 'all' || canonicalChannelKey(s.acquisitionChannel || '') === channelFilter;
     const matchesRisk = churnRiskFilter === 'all' || s.churnRisk === churnRiskFilter;
-    return matchesSearch && matchesStatus && matchesAccess && matchesCountry && matchesChannel && matchesRisk;
+    return matchesSearch && matchesStatus && matchesCountry && matchesChannel && matchesRisk;
   });
 
   const filteredAllDonations = normalizedDonations.filter((d: Donation) => {
@@ -223,13 +233,6 @@ export default function DonorsContributions() {
           return compareText(a.acquisitionChannel || '', b.acquisitionChannel || '', donorSortDir);
         case 'churnRisk':
           return compareRiskLevel(a.churnRisk, b.churnRisk, donorSortDir);
-        case 'access':
-          return compareText(a.hasLinkedLogin ? 'linked' : 'unlinked', b.hasLinkedLogin ? 'linked' : 'unlinked', donorSortDir);
-        case 'details': {
-          const aAction = a.hasLinkedLogin ? (a.hasAdminRole ? 'view only' : 'make admin') : 'link to login';
-          const bAction = b.hasLinkedLogin ? (b.hasAdminRole ? 'view only' : 'make admin') : 'link to login';
-          return compareText(aAction, bAction, donorSortDir);
-        }
         default:
           return 0;
       }
@@ -246,6 +249,8 @@ export default function DonorsContributions() {
           return compareText(a.donorName || '', b.donorName || '', contribSortDir);
         case 'type':
           return compareText(a.type, b.type, contribSortDir);
+        case 'campaignName':
+          return compareText(a.campaignName || '', b.campaignName || '', contribSortDir);
         case 'value':
           return compareDonationValue(a, b, contribSortDir);
         default:
@@ -267,7 +272,6 @@ export default function DonorsContributions() {
     : [];
 
   const resetDonorForm = () => {
-    setDonorLinkAdvancedOpen(false);
     setDonorForm({
       displayName: '',
       email: '',
@@ -313,7 +317,6 @@ export default function DonorsContributions() {
       const openDonationForSavedDonor = saveDonorAndAddDonation && !!supporterId;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['supporters'] }),
-        queryClient.invalidateQueries({ queryKey: ['unlinked-donor-logins'] }),
       ]);
       setSaveDonorAndAddDonation(false);
       setDonorDialogOpen(false);
@@ -321,6 +324,7 @@ export default function DonorsContributions() {
         setEditingDonation(null);
         resetDonationForm();
         setDonationForm((f) => ({ ...f, supporterId }));
+        setDonationLockedSupporterId(supporterId);
         setDonationDialogOpen(true);
       }
       toast({
@@ -380,7 +384,12 @@ export default function DonorsContributions() {
       setDeleteDonorTarget(null);
       toast({ title: 'Deleted', description: 'Donor removed.' });
     },
-    onError: () => toast({ title: 'Delete failed', description: 'Could not delete donor.', variant: 'destructive' }),
+    onError: (error) =>
+      toast({
+        title: 'Delete failed',
+        description: error instanceof Error ? error.message : 'Could not delete donor.',
+        variant: 'destructive',
+      }),
   });
   const deleteDonationMutation = useMutation({
     mutationFn: (id: string) => deleteDonation(id),
@@ -411,13 +420,6 @@ export default function DonorsContributions() {
       });
     },
   });
-  const unlinkedLoginsQ = useQuery({
-    queryKey: ['unlinked-donor-logins'],
-    queryFn: fetchUnlinkedDonorLogins,
-    enabled: donorDialogOpen && donorLinkAdvancedOpen,
-  });
-  const unlinkedLoginOptions = unlinkedLoginsQ.data ?? [];
-
   const loading = supportersQ.isLoading || donationsQ.isLoading;
 
   if (supportersQ.error || donationsQ.error) {
@@ -434,12 +436,14 @@ export default function DonorsContributions() {
 
   const openDonationForCreate = () => {
     setEditingDonation(null);
+    setDonationLockedSupporterId(null);
     resetDonationForm();
     setDonationDialogOpen(true);
   };
 
-  const openDonationForEdit = (d: Donation) => {
+  const openDonationForEdit = (d: Donation, lockDonor = true) => {
     setEditingDonation(d);
+    setDonationLockedSupporterId(lockDonor ? d.supporterId : null);
     const isMonetary = d.type === 'monetary';
     const raw = isMonetary ? String(d.amount ?? '') : String(d.hours ?? d.amount ?? '');
     setDonationForm({
@@ -452,11 +456,6 @@ export default function DonorsContributions() {
       notes: d.notes || '',
     });
     setDonationDialogOpen(true);
-  };
-
-  const getDonorAccessStatus = (supporter: Supporter): { label: string; linked: boolean } => {
-    if (supporter.hasLinkedLogin) return { label: 'Login linked', linked: true };
-    return { label: 'No login linked', linked: false };
   };
 
   return (
@@ -502,14 +501,6 @@ export default function DonorsContributions() {
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={accessFilter} onValueChange={(v: 'all' | 'linked' | 'unlinked') => { setAccessFilter(v); setCurrentPage(1); }}>
-          <SelectTrigger className="w-[170px]"><SelectValue placeholder="Access" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All access</SelectItem>
-            <SelectItem value="linked">Login linked</SelectItem>
-            <SelectItem value="unlinked">No login linked</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={countryFilter} onValueChange={(v) => { setCountryFilter(v); setCurrentPage(1); }}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder="Country" /></SelectTrigger>
           <SelectContent>
@@ -545,7 +536,6 @@ export default function DonorsContributions() {
           onClick={() => {
             setSearch('');
             setStatusFilter('all');
-            setAccessFilter('all');
             setCountryFilter('all');
             setChannelFilter('all');
             setChurnRiskFilter('all');
@@ -598,39 +588,22 @@ export default function DonorsContributions() {
                 >
                   Churn risk
                 </SortableTableHead>
-                <SortableTableHead
-                  active={donorSortKey === 'access'}
-                  direction={donorSortKey === 'access' ? donorSortDir : null}
-                  onSort={() => handleDonorSort('access')}
-                >
-                  Access
-                </SortableTableHead>
-                <SortableTableHead
-                  active={donorSortKey === 'details'}
-                  direction={donorSortKey === 'details' ? donorSortDir : null}
-                  onSort={() => handleDonorSort('details')}
-                  className="w-[100px]"
-                >
-                  Details
-                </SortableTableHead>
+                <TableHead className="w-[100px]">Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginated.map((s) => {
-                const access = getDonorAccessStatus(s);
-                return (
-                  <TableRow key={s.id}>
+              {paginated.map((s) => (
+                <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.displayName}</TableCell>
                   <TableCell>
-                    <Badge variant={s.status === 'active' ? 'default' : 'secondary'}>{s.status}</Badge>
+                    <Badge variant={s.status === 'active' ? 'default' : 'secondary'}>
+                      {s.status === 'active' ? 'Active' : 'Inactive'}
+                    </Badge>
                   </TableCell>
                   <TableCell>{s.country}</TableCell>
                   <TableCell className="text-sm">{formatChannel(s.acquisitionChannel || '') || '—'}</TableCell>
                   <TableCell>
                     <RiskBadge level={s.churnRisk} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={access.linked ? 'default' : 'secondary'}>{access.label}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -682,9 +655,8 @@ export default function DonorsContributions() {
                       </Button>
                     </div>
                   </TableCell>
-                  </TableRow>
-                );
-              })}
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         )}
@@ -701,7 +673,7 @@ export default function DonorsContributions() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-display text-lg">All contributions</CardTitle>
+          <CardTitle className="font-display text-lg">All Donations</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
@@ -711,7 +683,7 @@ export default function DonorsContributions() {
                 <SelectItem value="all">All donation types</SelectItem>
                 {donationTypeValues.map((t) => (
                   <SelectItem key={t} value={t}>
-                    {t}
+                    {formatDonationTypeLabel(t)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -744,6 +716,13 @@ export default function DonorsContributions() {
                     Donor
                   </SortableTableHead>
                   <SortableTableHead
+                    active={contribSortKey === 'value'}
+                    direction={contribSortKey === 'value' ? contribSortDir : null}
+                    onSort={() => toggleContribSort('value')}
+                  >
+                    Value
+                  </SortableTableHead>
+                  <SortableTableHead
                     active={contribSortKey === 'type'}
                     direction={contribSortKey === 'type' ? contribSortDir : null}
                     onSort={() => toggleContribSort('type')}
@@ -751,11 +730,11 @@ export default function DonorsContributions() {
                     Type
                   </SortableTableHead>
                   <SortableTableHead
-                    active={contribSortKey === 'value'}
-                    direction={contribSortKey === 'value' ? contribSortDir : null}
-                    onSort={() => toggleContribSort('value')}
+                    active={contribSortKey === 'campaignName'}
+                    direction={contribSortKey === 'campaignName' ? contribSortDir : null}
+                    onSort={() => toggleContribSort('campaignName')}
                   >
-                    Value
+                    Campaign / Source
                   </SortableTableHead>
                   <TableHead className="w-[90px]" />
                 </TableRow>
@@ -765,18 +744,24 @@ export default function DonorsContributions() {
                   <TableRow key={d.id}>
                     <TableCell className="text-sm">{d.date}</TableCell>
                     <TableCell className="text-sm">{d.donorName}</TableCell>
-                    <TableCell className="capitalize text-sm">{d.type}</TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm font-semibold text-primary tabular-nums">
                       {d.type === 'time'
                         ? `${(d.hours ?? d.amount ?? 0).toLocaleString()} hrs`
                         : d.amount != null
                           ? `₱${d.amount.toLocaleString()}`
                           : '—'}
                     </TableCell>
+                    <TableCell className="text-sm">{formatDonationTypeLabel(d.type)}</TableCell>
+                    <TableCell className="text-sm">{d.campaignName || '—'}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => openDonationForEdit(d)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openDonationForEdit(d, false)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteDonationTarget(d)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -800,6 +785,7 @@ export default function DonorsContributions() {
                     setSelectedDonor(null);
                     setEditingDonation(null);
                     resetDonationForm();
+                    setDonationLockedSupporterId(selectedDonor.id);
                     setDonationForm((f) => ({ ...f, supporterId: selectedDonor.id }));
                     setDonationDialogOpen(true);
                   }}
@@ -868,9 +854,6 @@ export default function DonorsContributions() {
                 value={donorForm.email}
                 onChange={(e) => setDonorForm({ ...donorForm, email: e.target.value })}
               />
-              <p className="text-xs text-muted-foreground mt-1.5">
-                For portal sign-in to match this record, use the same email they use to register. You can fix typos or offline-only entries here.
-              </p>
             </div>
             <div>
               <Label>Type</Label>
@@ -906,46 +889,6 @@ export default function DonorsContributions() {
                 </SelectContent>
               </Select>
             </div>
-            <Collapsible open={donorLinkAdvancedOpen} onOpenChange={setDonorLinkAdvancedOpen}>
-              <CollapsibleTrigger asChild>
-                <Button type="button" variant="ghost" size="sm" className="flex w-full justify-between px-0 h-auto py-1 font-normal text-muted-foreground hover:text-foreground">
-                  <span>Advanced — copy email from an unlinked account</span>
-                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${donorLinkAdvancedOpen ? 'rotate-180' : ''}`} />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-2 pt-1">
-                <p className="text-xs text-muted-foreground">
-                  Rare: a donor account exists in the system but has no matching profile row yet. Choosing one fills the email field above; save when ready.
-                </p>
-                {unlinkedLoginsQ.isLoading ? (
-                  <p className="text-xs text-muted-foreground">Loading accounts…</p>
-                ) : unlinkedLoginOptions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No unlinked donor accounts right now — set email manually.</p>
-                ) : (
-                  <div>
-                    <Label className="text-xs">Unlinked donor logins</Label>
-                    <Select
-                      value=""
-                      onValueChange={(userId) => {
-                        const row = unlinkedLoginOptions.find((u) => u.userId === userId);
-                        if (row) setDonorForm((f) => ({ ...f, email: row.email }));
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose account to copy email" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unlinkedLoginOptions.map((u) => (
-                          <SelectItem key={u.userId} value={u.userId}>
-                            {u.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
             <EditableSelect
               label="Country"
               allowEmpty
@@ -1011,12 +954,16 @@ export default function DonorsContributions() {
           <div className="grid gap-3">
             <div>
               <Label>Donor</Label>
-              <Select value={donationForm.supporterId} onValueChange={(v) => setDonationForm({ ...donationForm, supporterId: v })} disabled={!!editingDonation}>
+              <Select
+                value={donationForm.supporterId}
+                onValueChange={(v) => setDonationForm({ ...donationForm, supporterId: v })}
+                disabled={!!donationLockedSupporterId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select donor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {normalizedSupporters.map((s) => (
+                  {(editingDonation ? normalizedSupporters : donationSelectableSupporters).map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.displayName}
                     </SelectItem>
@@ -1042,7 +989,7 @@ export default function DonorsContributions() {
                 <SelectContent>
                   {donationTypeOptions.map((t) => (
                     <SelectItem key={t} value={t}>
-                      {t}
+                      {formatDonationTypeLabel(t)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1080,10 +1027,16 @@ export default function DonorsContributions() {
               <Label>Donation date</Label>
               <Input type="date" value={donationForm.donationDate} onChange={(e) => setDonationForm({ ...donationForm, donationDate: e.target.value })} />
             </div>
-            <div>
-              <Label>Campaign / source (optional)</Label>
-              <Input value={donationForm.campaignName} onChange={(e) => setDonationForm({ ...donationForm, campaignName: e.target.value })} />
-            </div>
+            <EditableSelect
+              label="Campaign / source (optional)"
+              allowEmpty
+              placeholder="Select campaign source"
+              value={donationForm.campaignName}
+              customValue={donationForm.campaignName}
+              options={campaignSourceOptions}
+              onChange={(v) => setDonationForm({ ...donationForm, campaignName: v })}
+              onCustomChange={(v) => setDonationForm({ ...donationForm, campaignName: v })}
+            />
             <div>
               <Label>Notes (optional)</Label>
               <Textarea value={donationForm.notes} onChange={(e) => setDonationForm({ ...donationForm, notes: e.target.value })} rows={3} />

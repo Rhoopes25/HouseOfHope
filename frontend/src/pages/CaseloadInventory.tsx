@@ -285,7 +285,7 @@ export default function CaseloadInventory() {
     return (
         <div className="space-y-2">
           <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-2">
-            <Users className="h-8 w-8 text-primary shrink-0" />
+            <Users className="h-8 w-8 text-primary shrink-0" aria-hidden="true" />
             Caseload Inventory
           </h1>
           <p className="text-destructive text-sm">Could not load residents from the API.</p>
@@ -297,21 +297,27 @@ export default function CaseloadInventory() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-2">
-            <Users className="h-8 w-8 text-primary shrink-0" />
+            <Users className="h-8 w-8 text-primary shrink-0" aria-hidden="true" />
             Caseload Inventory
           </h1>
           <Button onClick={() => setOpenCreate(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Add Resident
+            <Plus className="h-4 w-4 mr-2" aria-hidden="true" /> Add Resident
           </Button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search by code, case number, or social worker..." className="pl-10" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              placeholder="Search by code, case number, or social worker..."
+              className="pl-10"
+              value={search}
+              aria-label="Search residents"
+              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+            />
           </div>
           <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setCurrentPage(1); }}>
-            <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[150px]" aria-label="Filter by status"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
@@ -320,7 +326,7 @@ export default function CaseloadInventory() {
             </SelectContent>
           </Select>
           <Select value={riskFilter} onValueChange={v => { setRiskFilter(v); setCurrentPage(1); }}>
-            <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Risk" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[150px]" aria-label="Filter by risk level"><SelectValue placeholder="Risk" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Risk</SelectItem>
               <SelectItem value="low">Low</SelectItem>
@@ -341,7 +347,7 @@ export default function CaseloadInventory() {
             </SelectContent>
           </Select>
           <Select value={safehouseFilter} onValueChange={v => { setSafehouseFilter(v); setCurrentPage(1); }}>
-            <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Safehouse" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by safehouse"><SelectValue placeholder="Safehouse" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Safehouses</SelectItem>
               {safehouses.map(s => (
@@ -350,7 +356,7 @@ export default function CaseloadInventory() {
             </SelectContent>
           </Select>
           <Select value={categoryFilter} onValueChange={v => { setCategoryFilter(v); setCurrentPage(1); }}>
-            <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[200px]" aria-label="Filter by case category"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               {caseCategories.map(c => (
@@ -462,8 +468,14 @@ export default function CaseloadInventory() {
                         <TableCell className="text-sm">{r.reintegrationStatus}</TableCell>
                         <TableCell>
                           <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/resident/${r.id}`)}>
-                              <Edit className="h-3.5 w-3.5" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              aria-label={`Edit resident ${r.caseControlNumber}`}
+                              onClick={() => navigate(`/admin/resident/${r.id}`)}
+                            >
+                              <Edit className="h-3.5 w-3.5" aria-hidden="true" />
                             </Button>
                           </div>
                         </TableCell>
@@ -480,7 +492,15 @@ export default function CaseloadInventory() {
               [...Array(5)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)
           ) : (
               paginated.map((r: Resident) => (
-                  <div key={r.id} className="bg-card rounded-xl border shadow-sm p-4 cursor-pointer" onClick={() => navigate(`/admin/resident/${r.id}`)}>
+                  <div
+                    key={r.id}
+                    className="bg-card rounded-xl border shadow-sm p-4 cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View resident ${r.caseControlNumber}`}
+                    onClick={() => navigate(`/admin/resident/${r.id}`)}
+                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/admin/resident/${r.id}`)}
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-semibold text-sm">{r.caseControlNumber}</span>
                       <div className="flex gap-2">
@@ -526,12 +546,20 @@ export default function CaseloadInventory() {
                 <p className="text-sm font-medium text-foreground">Case &amp; placement</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label>Case Control Number</Label>
-                    <Input value={createForm.caseControlNumber} onChange={(e) => setCreateForm({ ...createForm, caseControlNumber: e.target.value })} />
+                    <Label htmlFor="caseControlNumber">Case Control Number</Label>
+                    <Input
+                      id="caseControlNumber"
+                      value={createForm.caseControlNumber}
+                      onChange={(e) => setCreateForm({ ...createForm, caseControlNumber: e.target.value })}
+                    />
                   </div>
                   <div>
-                    <Label>Internal Code</Label>
-                    <Input value={createForm.internalCode} onChange={(e) => setCreateForm({ ...createForm, internalCode: e.target.value })} />
+                    <Label htmlFor="internalCode">Internal Code</Label>
+                    <Input
+                      id="internalCode"
+                      value={createForm.internalCode}
+                      onChange={(e) => setCreateForm({ ...createForm, internalCode: e.target.value })}
+                    />
                   </div>
                 </div>
                 <EditableSelect
@@ -562,9 +590,9 @@ export default function CaseloadInventory() {
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label>Status</Label>
+                    <Label htmlFor="caseStatus">Status</Label>
                     <Select value={createForm.caseStatus} onValueChange={(v) => setCreateForm({ ...createForm, caseStatus: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger id="caseStatus" aria-label="Case status"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="closed">Closed</SelectItem>
@@ -573,9 +601,9 @@ export default function CaseloadInventory() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Risk</Label>
+                    <Label htmlFor="riskLevel">Risk</Label>
                     <Select value={createForm.riskLevel} onValueChange={(v) => setCreateForm({ ...createForm, riskLevel: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger id="riskLevel" aria-label="Risk level"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="low">Low</SelectItem>
                         <SelectItem value="medium">Medium</SelectItem>
@@ -591,12 +619,22 @@ export default function CaseloadInventory() {
                 <p className="text-sm font-medium text-foreground">Demographics</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label>Date of birth</Label>
-                    <Input type="date" value={createForm.dateOfBirth} onChange={(e) => setCreateForm({ ...createForm, dateOfBirth: e.target.value })} />
+                    <Label htmlFor="dateOfBirth">Date of birth</Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={createForm.dateOfBirth}
+                      onChange={(e) => setCreateForm({ ...createForm, dateOfBirth: e.target.value })}
+                    />
                   </div>
                   <div>
-                    <Label>Admission date</Label>
-                    <Input type="date" value={createForm.admissionDate} onChange={(e) => setCreateForm({ ...createForm, admissionDate: e.target.value })} />
+                    <Label htmlFor="admissionDate">Admission date</Label>
+                    <Input
+                      id="admissionDate"
+                      type="date"
+                      value={createForm.admissionDate}
+                      onChange={(e) => setCreateForm({ ...createForm, admissionDate: e.target.value })}
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -633,8 +671,8 @@ export default function CaseloadInventory() {
                 />
               </div>
 
-              <div className="grid gap-2">
-                <p className="text-sm font-medium text-foreground">Case subcategories</p>
+              <fieldset className="grid gap-2 border-0 p-0 m-0">
+                <legend className="text-sm font-medium text-foreground mb-1">Case subcategories</legend>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                   {([
                     ['subCatOrphaned', 'Orphaned'],
@@ -648,20 +686,21 @@ export default function CaseloadInventory() {
                     ['subCatStreetChild', 'Street child'],
                     ['subCatChildWithHiv', 'Child with HIV'],
                   ] as const).map(([key, label]) => (
-                    <label key={key} className="flex items-center gap-2">
+                    <label key={key} className="flex items-center gap-2 text-foreground">
                       <input
                         type="checkbox"
                         checked={createForm[key]}
+                        aria-label={label}
                         onChange={(e) => setCreateForm({ ...createForm, [key]: e.target.checked })}
                       />
                       {label}
                     </label>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
-              <div className="grid gap-2">
-                <p className="text-sm font-medium text-foreground">Family profile</p>
+              <fieldset className="grid gap-2 border-0 p-0 m-0">
+                <legend className="text-sm font-medium text-foreground mb-1">Family profile</legend>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                   {([
                     ['familyIs4ps', '4Ps beneficiary'],
@@ -670,17 +709,18 @@ export default function CaseloadInventory() {
                     ['familyInformalSettler', 'Informal settler'],
                     ['familyParentPwd', 'Parent with disability'],
                   ] as const).map(([key, label]) => (
-                    <label key={key} className="flex items-center gap-2">
+                    <label key={key} className="flex items-center gap-2 text-foreground">
                       <input
                         type="checkbox"
                         checked={createForm[key]}
+                        aria-label={label}
                         onChange={(e) => setCreateForm({ ...createForm, [key]: e.target.checked })}
                       />
                       {label}
                     </label>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               <div className="grid gap-3">
                 <p className="text-sm font-medium text-foreground">Referral &amp; reintegration</p>
@@ -729,8 +769,13 @@ export default function CaseloadInventory() {
                   />
                 </div>
                 <div>
-                  <Label>Initial assessment</Label>
-                  <Textarea rows={4} value={createForm.initialAssessment} onChange={(e) => setCreateForm({ ...createForm, initialAssessment: e.target.value })} />
+                  <Label htmlFor="initialAssessment">Initial assessment</Label>
+                  <Textarea
+                    id="initialAssessment"
+                    rows={4}
+                    value={createForm.initialAssessment}
+                    onChange={(e) => setCreateForm({ ...createForm, initialAssessment: e.target.value })}
+                  />
                 </div>
               </div>
             </div>

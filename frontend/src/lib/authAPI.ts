@@ -6,6 +6,17 @@ export interface AuthSession {
   roles: string[];
 }
 
+export interface UserProfile {
+  userName: string;
+  email: string;
+  displayName: string;
+  supporterType: string;
+  status: 'active' | 'inactive';
+  country: string;
+  acquisitionChannel: string;
+  firstDonationDate: string;
+}
+
 const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
 
 const normalizeAuthApiBaseUrl = (baseUrl: string) => {
@@ -74,4 +85,31 @@ export async function logoutUser(): Promise<void> {
   if (!response.ok) {
     throw new Error(await readApiError(response, "Unable to log out."));
   }
+}
+
+export async function fetchMyProfile(): Promise<UserProfile> {
+  const response = await fetch(`${apiBaseUrl}/auth/profile`, { credentials: "include" });
+  if (!response.ok) throw new Error(await readApiError(response, "Unable to load profile."));
+  return response.json();
+}
+
+export async function updateMyProfile(payload: {
+  email: string;
+  displayName: string;
+  supporterType: string;
+  status: 'active' | 'inactive';
+  country: string;
+  acquisitionChannel: string;
+  firstDonationDate?: string;
+  currentPassword?: string;
+  newPassword?: string;
+}): Promise<UserProfile> {
+  const response = await fetch(`${apiBaseUrl}/auth/profile`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await readApiError(response, "Unable to update profile."));
+  return response.json();
 }
