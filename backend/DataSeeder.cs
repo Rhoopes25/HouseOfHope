@@ -92,6 +92,12 @@ public static class DataSeeder
             var homeVisitations = ReadCsv<HomeVisitation>(CsvPath(contentRootPath, "home_visitations.csv"));
             SeedWithIdentityInsert(context, "home_visitations", homeVisitations);
         }
+
+        if (!context.SocialMediaPosts.Any() && File.Exists(CsvPath(contentRootPath, "social_media_posts.csv")))
+        {
+            var socialMediaPosts = ReadCsv<SocialMediaPost>(CsvPath(contentRootPath, "social_media_posts.csv"));
+            SeedWithIdentityInsert(context, "social_media_posts", socialMediaPosts);
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
