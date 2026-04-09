@@ -13,6 +13,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<SocialMediaPredictionService>();
 builder.Services.AddScoped<CaseManagementPredictionService>();
+builder.Services.AddScoped<DonorChurnPredictionService>();
 
 if (builder.Environment.IsDevelopment())
 {
@@ -76,6 +77,13 @@ builder.Services.AddRateLimiter(options =>
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         limiterOptions.QueueLimit = 0;
     });
+});
+
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = false;
+    options.Preload = false;
 });
 
 builder.Services.ConfigureApplicationCookie(options =>
@@ -157,7 +165,7 @@ using (var scope = app.Services.CreateScope())
         // PRODUCTION: intentionally no startup DB work to keep boot fast and reliable.
         // If you ever need one-time reseed/reinit, temporarily uncomment:
         // await appDb.Database.MigrateAsync();
-        DataSeeder.Seed(appDb, app.Environment.ContentRootPath);
+        // DataSeeder.Seed(appDb, app.Environment.ContentRootPath);
         // await identityDb.Database.MigrateAsync();
         // await AuthIdentityGenerator.GenerateDefaultIdentityAsync(services, app.Configuration);
     }
@@ -170,6 +178,7 @@ app.UseCors(FrontendCorsPolicy);
 app.UseSecurityHeaders();
 if (!app.Environment.IsDevelopment())
 {
+    app.UseHsts();
     app.UseHttpsRedirection();
 }
 app.UseRateLimiter();

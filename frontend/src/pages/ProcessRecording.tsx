@@ -7,7 +7,13 @@ import {
   fetchResidents,
 } from '@/lib/api-endpoints';
 import type { CounselingSession, InterventionPlan, Resident } from '@/lib/types';
-import { planCategoryLabel, PLAN_STATUS_LABELS } from '@/lib/residentFieldOptions';
+import {
+  DEFAULT_PLAN_CATEGORY_SLUGS,
+  EMOTIONAL_STATE_SEEDS,
+  mergeDistinctOptions,
+  planCategoryLabel,
+  PLAN_STATUS_LABELS,
+} from '@/lib/residentFieldOptions';
 import { toTitleCase } from '@/lib/titleCase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,8 +25,10 @@ import { Button } from '@/components/ui/button';
 import { SortableTableHead } from '@/components/SortableTableHead';
 import { useTableSortState } from '@/hooks/useTableSortState';
 import { compareText } from '@/lib/tableSort';
-import { ArrowRight, ScrollText } from 'lucide-react';
+import { ArrowRight, Plus, ScrollText } from 'lucide-react';
 import { PAGE_SIZE_OPTIONS, PaginationControl, usePagination } from '@/components/PaginationControl';
+import { CounselingSessionFormDialog } from '@/components/CounselingSessionFormDialog';
+import { InterventionPlanFormDialog } from '@/components/InterventionPlanFormDialog';
 
 type EventKind = 'counseling' | 'intervention';
 
@@ -85,6 +93,10 @@ export default function ProcessRecording() {
   const [sessionType, setSessionType] = useState<'all' | 'individual' | 'group'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [counselingDialogOpen, setCounselingDialogOpen] = useState(false);
+  const [interventionDialogOpen, setInterventionDialogOpen] = useState(false);
+  const [addCounselingResidentId, setAddCounselingResidentId] = useState('');
+  const [addInterventionResidentId, setAddInterventionResidentId] = useState('');
 
   const residentParam = residentFilter === 'all' ? undefined : residentFilter;
 
@@ -101,6 +113,28 @@ export default function ProcessRecording() {
   const residentsSorted = useMemo(
     () => [...(residentsQ.data ?? [])].sort((a, b) => a.internalCode.localeCompare(b.internalCode)),
     [residentsQ.data],
+  );
+
+  const socialWorkerOptions = useMemo(
+    () =>
+      [...new Set(residentsSorted.map((r) => r.assignedSocialWorker).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base' }),
+      ),
+    [residentsSorted],
+  );
+
+  const emotionalStateOptions = useMemo(
+    () =>
+      mergeDistinctOptions(
+        (sessionsQ.data ?? []).flatMap((s) => [s.emotionalStateStart, s.emotionalStateEnd]),
+        [...EMOTIONAL_STATE_SEEDS],
+      ),
+    [sessionsQ.data],
+  );
+
+  const planCategoryOptions = useMemo(
+    () => mergeDistinctOptions((plansQ.data ?? []).map((p) => p.planCategory), [...DEFAULT_PLAN_CATEGORY_SLUGS]),
+    [plansQ.data],
   );
 
   const { sortKey, sortDir, toggleSort } = useTableSortState();
@@ -173,22 +207,78 @@ export default function ProcessRecording() {
 
   const loading = sessionsQ.isLoading || plansQ.isLoading || residentsQ.isLoading;
 
+  const openAddCounseling = () => {
+    setAddCounselingResidentId(residentFilter !== 'all' ? residentFilter : '');
+    setCounselingDialogOpen(true);
+  };
+
+  const openAddIntervention = () => {
+    setAddInterventionResidentId(residentFilter !== 'all' ? residentFilter : '');
+    setInterventionDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-2">
-          <ScrollText className="h-8 w-8 text-primary shrink-0" />
-          Process Recording
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-          Chronological view of counseling sessions and intervention plans across the caseload. Filter by resident to see
-          that girl&apos;s events. Add or edit entries on each{' '}
-          <Link to="/admin/caseload" className="text-primary underline-offset-4 hover:underline">
-            resident profile
-          </Link>
-          . Newest first by default; up to 500 counseling sessions and 500 intervention plans loaded per resident filter.
-        </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-2">
+            <ScrollText className="h-8 w-8 text-primary shrink-0" aria-hidden="true" />
+            Process Recording
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
+            Chronological view of counseling sessions and intervention plans across the caseload. Filter by resident to narrow
+            the list, or use Add counseling / Add intervention to log entries for any girl (choose her in the form). You can
+            still add or edit from each{' '}
+            <Link to="/admin/caseload" className="text-primary underline-offset-4 hover:underline">
+              resident profile
+            </Link>
+            . Newest first by default; up to 500 counseling sessions and 500 intervention plans loaded per resident filter.
+          </p>
+        </div>
+        <div className="flex gap-2 flex-wrap shrink-0">
+          <Button type="button" variant="outline" onClick={openAddCounseling}>
+            <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
+            Add counseling
+          </Button>
+          <Button type="button" variant="outline" onClick={openAddIntervention}>
+            <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
+            Add intervention
+          </Button>
+        </div>
       </div>
+
+      <CounselingSessionFormDialog
+        open={counselingDialogOpen}
+        onOpenChange={(o) => {
+          setCounselingDialogOpen(o);
+          if (!o) setAddCounselingResidentId('');
+        }}
+        baseResidentId=""
+        residentPicker={{
+          value: addCounselingResidentId,
+          onChange: setAddCounselingResidentId,
+          residents: residentsSorted,
+        }}
+        socialWorkerOptions={socialWorkerOptions}
+        emotionalStateOptions={emotionalStateOptions}
+        editingSession={null}
+      />
+
+      <InterventionPlanFormDialog
+        open={interventionDialogOpen}
+        onOpenChange={(o) => {
+          setInterventionDialogOpen(o);
+          if (!o) setAddInterventionResidentId('');
+        }}
+        baseResidentId=""
+        residentPicker={{
+          value: addInterventionResidentId,
+          onChange: setAddInterventionResidentId,
+          residents: residentsSorted,
+        }}
+        planCategoryOptions={planCategoryOptions}
+        editingPlan={null}
+      />
 
       <div className="flex flex-col lg:flex-row flex-wrap gap-3">
         <Select value={residentFilter} onValueChange={setResidentFilter}>

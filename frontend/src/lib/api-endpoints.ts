@@ -118,6 +118,10 @@ export const fetchCaseConferences = () =>
   apiFetch<UpcomingConference[]>('/Residents/case-conferences');
 
 export const fetchSupporters = () => apiFetch<Supporter[]>('/Supporters');
+
+export const fetchChurnRisks = () =>
+  apiFetch<Record<string, { riskScore: number; riskTier: string; topDrivers: string[]; recommendedActions: string[] }>>('/ML/donor-churn/all');
+
 export const createSupporter = (payload: {
   displayName: string;
   supporterType: string;
@@ -413,3 +417,4 @@ export const fetchImpactStats = () => apiFetch<ImpactStats>('/Analytics/impact')
 export const fetchReportsAnalytics = () => apiFetch<ReportsAnalyticsPayload>('/Analytics/reports');
 
 export const fetchDashboard = () => apiFetch<DashboardSummary>('/Analytics/dashboard');
+

@@ -2,8 +2,6 @@ import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  createResidentPlan,
-  createResidentSession,
   createResidentVisitation,
   deleteResident,
   deleteResidentPlan,
@@ -15,14 +13,12 @@ import {
   fetchResidentSessions,
   fetchResidentVisitations,
   updateResident,
-  updateResidentPlan,
-  updateResidentSession,
   updateResidentVisitation,
 } from '@/lib/api-endpoints';
 import { formatCaseCategoryLabel } from '@/lib/caseCategoryDisplay';
 import { displaySafehouseName } from '@/lib/safehouseDisplay';
 import { EditableSelect } from '@/components/EditableSelect';
-import type { Resident } from '@/lib/types';
+import type { CounselingSession, InterventionPlan, Resident } from '@/lib/types';
 import { RiskBadge } from '@/components/RiskBadge';
 import { StatusPill } from '@/components/StatusPill';
 import { PAGE_SIZE_OPTIONS, PaginationControl, usePagination } from '@/components/PaginationControl';
@@ -39,12 +35,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Calendar, Pencil, User, Users, Clock, MapPin, Trash2 } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { CounselingSessionFormDialog } from '@/components/CounselingSessionFormDialog';
+import { InterventionPlanFormDialog } from '@/components/InterventionPlanFormDialog';
 import { toTitleCase } from '@/lib/titleCase';
 import {
   COOPERATION_LEVEL_OPTIONS,
   DEFAULT_PLAN_CATEGORY_SLUGS,
   EMOTIONAL_STATE_SEEDS,
-  SESSION_DURATION_PRESETS,
   VISIT_OUTCOME_OPTIONS,
   VISIT_TYPE_OPTIONS,
   labelFromCooperationSlug,
@@ -52,7 +49,6 @@ import {
   labelFromVisitTypeSlug,
   mergeDistinctOptions,
   planCategoryLabel,
-  PLAN_STATUS_LABELS,
   slugForCooperation,
   slugForVisitOutcome,
   slugForVisitType,
@@ -75,9 +71,9 @@ export default function ResidentDetail() {
   const [openVisit, setOpenVisit] = useState(false);
   const [openResidentEdit, setOpenResidentEdit] = useState(false);
   const [openPlan, setOpenPlan] = useState(false);
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [sessionEditTarget, setSessionEditTarget] = useState<CounselingSession | null>(null);
   const [editingVisitId, setEditingVisitId] = useState<string | null>(null);
-  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [planEditTarget, setPlanEditTarget] = useState<InterventionPlan | null>(null);
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
   const [deleteVisitId, setDeleteVisitId] = useState<string | null>(null);
   const [deletePlanId, setDeletePlanId] = useState<string | null>(null);
@@ -125,23 +121,6 @@ export default function ResidentDetail() {
     religionOther: '',
     birthStatusOther: '',
   });
-  const [sessionForm, setSessionForm] = useState({
-    sessionDate: new Date().toISOString().slice(0, 10),
-    socialWorker: '',
-    socialWorkerOther: '',
-    sessionType: 'individual' as 'individual' | 'group',
-    durationPreset: '60' as string,
-    durationMinutes: 60,
-    emotionalStateStart: '',
-    emotionalStateStartOther: '',
-    emotionalStateEnd: '',
-    emotionalStateEndOther: '',
-    narrative: '',
-    interventions: '',
-    followUpActions: '',
-    progressNoted: false,
-    concernsFlagged: false,
-  });
   const [visitForm, setVisitForm] = useState({
     visitDate: new Date().toISOString().slice(0, 10),
     socialWorker: '',
@@ -162,16 +141,6 @@ export default function ResidentDetail() {
     visitOutcome: '',
     outcomeOther: '',
   });
-  const [planForm, setPlanForm] = useState({
-    planCategory: '',
-    planCategoryOther: '',
-    description: '',
-    servicesProvided: '',
-    targetDate: '',
-    status: 'pending' as 'pending' | 'in-progress' | 'completed' | 'on-hold',
-    caseConferenceDate: '',
-  });
-
   const residentQ = useQuery({
     queryKey: ['resident', id],
     queryFn: () => fetchResident(id!),
@@ -290,36 +259,6 @@ export default function ResidentDetail() {
     [plans],
   );
 
-  const buildSessionApiPayload = () => {
-    const socialWorker =
-      sessionForm.socialWorker === 'other'
-        ? sessionForm.socialWorkerOther.trim()
-        : sessionForm.socialWorker.trim();
-    const emotionalStateStart =
-      sessionForm.emotionalStateStart === 'other'
-        ? toTitleCase(sessionForm.emotionalStateStartOther)
-        : sessionForm.emotionalStateStart.trim();
-    const emotionalStateEnd =
-      sessionForm.emotionalStateEnd === 'other'
-        ? toTitleCase(sessionForm.emotionalStateEndOther)
-        : sessionForm.emotionalStateEnd.trim();
-    const durationMinutes =
-      sessionForm.durationPreset === 'other' ? sessionForm.durationMinutes : Number(sessionForm.durationPreset);
-    return {
-      sessionDate: sessionForm.sessionDate,
-      socialWorker,
-      sessionType: sessionForm.sessionType,
-      durationMinutes,
-      emotionalStateStart,
-      emotionalStateEnd,
-      narrative: sessionForm.narrative.trim(),
-      interventions: sessionForm.interventions.trim(),
-      followUpActions: sessionForm.followUpActions.trim(),
-      progressNoted: sessionForm.progressNoted,
-      concernsFlagged: sessionForm.concernsFlagged,
-    };
-  };
-
   const buildVisitApiPayload = () => {
     const socialWorker =
       visitForm.socialWorker === 'other'
@@ -400,21 +339,6 @@ export default function ResidentDetail() {
     },
     onError: () => toast({ title: 'Update failed', description: 'Could not update resident.', variant: 'destructive' }),
   });
-  const saveSessionMutation = useMutation({
-    mutationFn: () => {
-      const payload = buildSessionApiPayload();
-      return editingSessionId
-        ? updateResidentSession(id!, editingSessionId, payload)
-        : createResidentSession(id!, payload);
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['resident', id, 'sessions'] });
-      setOpenSession(false);
-      setEditingSessionId(null);
-      toast({ title: 'Session saved', description: 'Counseling session updated.' });
-    },
-    onError: () => toast({ title: 'Save failed', description: 'Could not save session.', variant: 'destructive' }),
-  });
   const saveVisitMutation = useMutation({
     mutationFn: () => {
       const payload = buildVisitApiPayload();
@@ -429,33 +353,6 @@ export default function ResidentDetail() {
       toast({ title: 'Visitation saved', description: 'Visitation record updated.' });
     },
     onError: () => toast({ title: 'Save failed', description: 'Could not save visitation.', variant: 'destructive' }),
-  });
-  const savePlanMutation = useMutation({
-    mutationFn: () => {
-      const planCategory =
-        planForm.planCategory === 'other'
-          ? toTitleCase(planForm.planCategoryOther)
-          : planForm.planCategory.trim();
-      const payload = {
-        planCategory,
-        description: planForm.description.trim(),
-        servicesProvided: planForm.servicesProvided.trim(),
-        targetDate: planForm.targetDate,
-        status: planForm.status,
-        caseConferenceDate: planForm.caseConferenceDate,
-      };
-      return editingPlanId
-        ? updateResidentPlan(id!, editingPlanId, payload)
-        : createResidentPlan(id!, payload);
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['resident', id, 'plans'] });
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      setOpenPlan(false);
-      setEditingPlanId(null);
-      toast({ title: 'Plan saved', description: 'Intervention plan updated.' });
-    },
-    onError: () => toast({ title: 'Save failed', description: 'Could not save intervention plan.', variant: 'destructive' }),
   });
   const deleteResidentMutation = useMutation({
     mutationFn: () => deleteResident(id!),
@@ -518,8 +415,8 @@ export default function ResidentDetail() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={() => navigate('/admin/caseload')} className="mb-2">
-        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Caseload
+      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2">
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
       {loading || !resident ? (
@@ -713,24 +610,7 @@ export default function ResidentDetail() {
               <div className="flex justify-end">
                 <Button
                   onClick={() => {
-                    setEditingSessionId(null);
-                    setSessionForm({
-                      sessionDate: new Date().toISOString().slice(0, 10),
-                      socialWorker: '',
-                      socialWorkerOther: '',
-                      sessionType: 'individual',
-                      durationPreset: '60',
-                      durationMinutes: 60,
-                      emotionalStateStart: '',
-                      emotionalStateStartOther: '',
-                      emotionalStateEnd: '',
-                      emotionalStateEndOther: '',
-                      narrative: '',
-                      interventions: '',
-                      followUpActions: '',
-                      progressNoted: false,
-                      concernsFlagged: false,
-                    });
+                    setSessionEditTarget(null);
                     setOpenSession(true);
                   }}
                 >
@@ -747,30 +627,7 @@ export default function ResidentDetail() {
                       <Badge variant="outline">{toTitleCase(s.sessionType)}</Badge>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" onClick={() => {
-                          setEditingSessionId(s.id);
-                          const sw = matchSelectOption(s.socialWorker, socialWorkerOptions);
-                          const es = matchSelectOption(s.emotionalStateStart, emotionalStateOptions);
-                          const ee = matchSelectOption(s.emotionalStateEnd, emotionalStateOptions);
-                          const inPreset = SESSION_DURATION_PRESETS.includes(
-                            s.durationMinutes as (typeof SESSION_DURATION_PRESETS)[number],
-                          );
-                          setSessionForm({
-                            sessionDate: s.sessionDate,
-                            socialWorker: sw.select === 'other' ? 'other' : sw.select,
-                            socialWorkerOther: sw.select === 'other' ? sw.other : '',
-                            sessionType: s.sessionType,
-                            durationPreset: inPreset ? String(s.durationMinutes) : 'other',
-                            durationMinutes: s.durationMinutes,
-                            emotionalStateStart: es.select === 'other' ? 'other' : es.select,
-                            emotionalStateStartOther: es.select === 'other' ? es.other : '',
-                            emotionalStateEnd: ee.select === 'other' ? 'other' : ee.select,
-                            emotionalStateEndOther: ee.select === 'other' ? ee.other : '',
-                            narrative: s.narrative,
-                            interventions: s.interventions,
-                            followUpActions: s.followUpActions,
-                            progressNoted: s.progressNoted,
-                            concernsFlagged: s.concernsFlagged,
-                          });
+                          setSessionEditTarget(s);
                           setOpenSession(true);
                         }}>
                           <Pencil className="h-4 w-4" />
@@ -915,16 +772,7 @@ export default function ResidentDetail() {
               <div className="flex justify-end">
                 <Button
                   onClick={() => {
-                    setEditingPlanId(null);
-                    setPlanForm({
-                      planCategory: '',
-                      planCategoryOther: '',
-                      description: '',
-                      servicesProvided: '',
-                      targetDate: '',
-                      status: 'pending',
-                      caseConferenceDate: '',
-                    });
+                    setPlanEditTarget(null);
                     setOpenPlan(true);
                   }}
                 >
@@ -942,17 +790,7 @@ export default function ResidentDetail() {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            setEditingPlanId(p.id);
-                            const pc = matchSelectOption(p.planCategory, planCategoryOptions);
-                            setPlanForm({
-                              planCategory: pc.select === 'other' ? 'other' : pc.select,
-                              planCategoryOther: pc.select === 'other' ? pc.other : '',
-                              description: p.description,
-                              servicesProvided: p.servicesProvided,
-                              targetDate: p.targetDate,
-                              status: p.status,
-                              caseConferenceDate: p.caseConferenceDate,
-                            });
+                            setPlanEditTarget(p);
                             setOpenPlan(true);
                           }}
                         >
@@ -974,144 +812,17 @@ export default function ResidentDetail() {
         </>
       )}
 
-      <Dialog open={openSession} onOpenChange={setOpenSession}>
-        <DialogContent className="sm:max-w-xl w-[min(100vw-2rem,36rem)] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
-            <DialogTitle className="font-display">
-              {editingSessionId ? 'Edit Counseling Session' : 'Add Counseling Session'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto px-6 pb-4 flex-1 min-h-0 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Session Date</Label>
-                <Input type="date" value={sessionForm.sessionDate} onChange={(e) => setSessionForm({ ...sessionForm, sessionDate: e.target.value })} />
-              </div>
-              <EditableSelect
-                label="Social Worker"
-                allowEmpty
-                placeholder="Select social worker"
-                value={sessionForm.socialWorker}
-                customValue={sessionForm.socialWorkerOther}
-                options={socialWorkerOptions}
-                onChange={(v) => setSessionForm({ ...sessionForm, socialWorker: v })}
-                onCustomChange={(v) => setSessionForm({ ...sessionForm, socialWorkerOther: v })}
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Type</Label>
-                <Select
-                  value={sessionForm.sessionType}
-                  onValueChange={(v: 'individual' | 'group') => setSessionForm({ ...sessionForm, sessionType: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="individual">Individual</SelectItem>
-                    <SelectItem value="group">Group</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Duration</Label>
-                <Select
-                  value={sessionForm.durationPreset}
-                  onValueChange={(v) =>
-                    setSessionForm({
-                      ...sessionForm,
-                      durationPreset: v,
-                      durationMinutes: v === 'other' ? sessionForm.durationMinutes : Number(v),
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SESSION_DURATION_PRESETS.map((m) => (
-                      <SelectItem key={m} value={String(m)}>
-                        {m} Minutes
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                {sessionForm.durationPreset === 'other' && (
-                  <Input
-                    type="number"
-                    min={1}
-                    className="mt-1"
-                    value={sessionForm.durationMinutes || ''}
-                    onChange={(e) => setSessionForm({ ...sessionForm, durationMinutes: Number(e.target.value) })}
-                  />
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <EditableSelect
-                label="Emotional State (Start)"
-                allowEmpty
-                placeholder="Select observed state"
-                value={sessionForm.emotionalStateStart}
-                customValue={sessionForm.emotionalStateStartOther}
-                options={emotionalStateOptions}
-                onChange={(v) => setSessionForm({ ...sessionForm, emotionalStateStart: v })}
-                onCustomChange={(v) => setSessionForm({ ...sessionForm, emotionalStateStartOther: v })}
-              />
-              <EditableSelect
-                label="Emotional State (End)"
-                allowEmpty
-                placeholder="Select observed state"
-                value={sessionForm.emotionalStateEnd}
-                customValue={sessionForm.emotionalStateEndOther}
-                options={emotionalStateOptions}
-                onChange={(v) => setSessionForm({ ...sessionForm, emotionalStateEnd: v })}
-                onCustomChange={(v) => setSessionForm({ ...sessionForm, emotionalStateEndOther: v })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Narrative</Label>
-              <Textarea rows={4} value={sessionForm.narrative} onChange={(e) => setSessionForm({ ...sessionForm, narrative: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Interventions</Label>
-              <Textarea rows={3} value={sessionForm.interventions} onChange={(e) => setSessionForm({ ...sessionForm, interventions: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Follow-Up Actions</Label>
-              <Textarea rows={3} value={sessionForm.followUpActions} onChange={(e) => setSessionForm({ ...sessionForm, followUpActions: e.target.value })} />
-            </div>
-            <label className="text-sm flex items-center gap-2">
-              <input type="checkbox" checked={sessionForm.progressNoted} onChange={(e) => setSessionForm({ ...sessionForm, progressNoted: e.target.checked })} />
-              Progress Noted
-            </label>
-            <label className="text-sm flex items-center gap-2">
-              <input type="checkbox" checked={sessionForm.concernsFlagged} onChange={(e) => setSessionForm({ ...sessionForm, concernsFlagged: e.target.checked })} />
-              Concerns Flagged
-            </label>
-          </div>
-          <div className="border-t px-6 py-4 shrink-0 flex justify-end gap-2 bg-muted/30">
-            <Button variant="outline" type="button" onClick={() => setOpenSession(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => saveSessionMutation.mutate()}
-              disabled={
-                saveSessionMutation.isPending ||
-                !sessionForm.sessionDate ||
-                !(sessionForm.socialWorker === 'other'
-                  ? sessionForm.socialWorkerOther.trim()
-                  : sessionForm.socialWorker.trim())
-              }
-            >
-              {saveSessionMutation.isPending ? 'Saving...' : 'Save Session'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CounselingSessionFormDialog
+        open={openSession}
+        onOpenChange={(o) => {
+          setOpenSession(o);
+          if (!o) setSessionEditTarget(null);
+        }}
+        baseResidentId={id!}
+        socialWorkerOptions={socialWorkerOptions}
+        emotionalStateOptions={emotionalStateOptions}
+        editingSession={sessionEditTarget}
+      />
 
       <Dialog open={openVisit} onOpenChange={setOpenVisit}>
         <DialogContent className="sm:max-w-xl w-[min(100vw-2rem,36rem)] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
@@ -1500,80 +1211,16 @@ export default function ResidentDetail() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={openPlan} onOpenChange={setOpenPlan}>
-        <DialogContent className="sm:max-w-xl w-[min(100vw-2rem,36rem)] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
-            <DialogTitle className="font-display">
-              {editingPlanId ? 'Edit Intervention Plan' : 'Add Intervention Plan'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto px-6 pb-4 flex-1 min-h-0 space-y-3">
-            <EditableSelect
-              label="Plan Category"
-              allowEmpty
-              placeholder="Select plan category"
-              value={planForm.planCategory}
-              customValue={planForm.planCategoryOther}
-              options={planCategoryOptions}
-              getOptionLabel={(o) => planCategoryLabel(o)}
-              onChange={(v) => setPlanForm({ ...planForm, planCategory: v })}
-              onCustomChange={(v) => setPlanForm({ ...planForm, planCategoryOther: v })}
-            />
-            <div className="grid gap-2">
-              <Label>Description</Label>
-              <Textarea rows={4} value={planForm.description} onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Services Provided</Label>
-              <Textarea rows={3} value={planForm.servicesProvided} onChange={(e) => setPlanForm({ ...planForm, servicesProvided: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Target Date</Label>
-                <Input type="date" value={planForm.targetDate} onChange={(e) => setPlanForm({ ...planForm, targetDate: e.target.value })} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Case Conference Date</Label>
-                <Input type="date" value={planForm.caseConferenceDate} onChange={(e) => setPlanForm({ ...planForm, caseConferenceDate: e.target.value })} />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label>Status</Label>
-              <Select
-                value={planForm.status}
-                onValueChange={(v: 'pending' | 'in-progress' | 'completed' | 'on-hold') => setPlanForm({ ...planForm, status: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(PLAN_STATUS_LABELS) as (keyof typeof PLAN_STATUS_LABELS)[]).map((key) => (
-                    <SelectItem key={key} value={key}>
-                      {PLAN_STATUS_LABELS[key]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="border-t px-6 py-4 shrink-0 flex justify-end gap-2 bg-muted/30">
-            <Button variant="outline" type="button" onClick={() => setOpenPlan(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => savePlanMutation.mutate()}
-              disabled={
-                savePlanMutation.isPending ||
-                !planForm.planCategory ||
-                (planForm.planCategory === 'other' && !planForm.planCategoryOther.trim())
-              }
-            >
-              {savePlanMutation.isPending ? 'Saving...' : 'Save Plan'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <InterventionPlanFormDialog
+        open={openPlan}
+        onOpenChange={(o) => {
+          setOpenPlan(o);
+          if (!o) setPlanEditTarget(null);
+        }}
+        baseResidentId={id!}
+        planCategoryOptions={planCategoryOptions}
+        editingPlan={planEditTarget}
+      />
 
       <ConfirmDeleteDialog
         open={confirmResidentDelete}

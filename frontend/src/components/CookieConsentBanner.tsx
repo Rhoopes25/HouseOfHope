@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useCookieConsent } from '@/contexts/CookieConsentContext';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,10 +17,13 @@ export function CookieConsentBanner() {
         >
           <div className="container mx-auto flex flex-col md:flex-row items-start md:items-center gap-4">
             <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">We value your privacy</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                We use cookies to enhance your experience and analyze our traffic. By clicking "Accept", you consent to our use of cookies.
-                Read our <a href="/privacy" className="text-primary underline">Privacy Policy</a> for more information.
+              <p className="text-xs text-muted-foreground">
+                We use essential cookies for sign-in and optional preference cookies to remember your theme and sidebar layout. By clicking
+                &quot;Accept&quot;, you allow us to save those preferences in your browser. Read our{' '}
+                <Link to="/privacy" className="text-primary underline">
+                  Privacy Policy
+                </Link>{' '}
+                for more information.
               </p>
             </div>
             <div className="flex gap-3">

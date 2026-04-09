@@ -120,6 +120,27 @@ Use .NET 10 / C\# on the back end and React / TypeScript (Vite) on the front end
     
 Make sure to validate data and handle errors so the website is robust and reliable. Put into practice all the things we learned about writing good code. Pay attention to the details and finishing touches—titles, icons, logos, consistent look and feel, pagination, speed, and other elements that separate good websites from excellent ones.   
 
+| Website |  | Objectives | Low (0-30) | Medium (40-70) | High (80-100) |
+| ----- | ----- | :---- | ----- | ----- | ----- |
+| 1 |  | App compiles and runs without errors | Poorly implemented or not at all | Implementation is adequate; acceptable, but not complete | Excellent implementation; well documented; ready to implement; goes beyond the case requirements |
+| 1 |  | Modern, professional, and well-organized UI with consistent branding/navigation |  |  |  |
+| 1 |  | Home / Landing page introduces the organization and gives clear calls to action |  |  |  |
+| 1 |  | Login page works with proper validation and error handling |  |  |  |
+| 1 |  | Privacy policy page is present and cookie consent is visible |  |  |  |
+| 1 |  | Public impact / donor-facing dashboard shows anonymized, aggregated impact data |  |  |  |
+| 2 |  | Donor dashboard allows an authenticated donor to view donation history and submit a fake donation |  |  |  |
+| 1 |  | Admin dashboard provides a high-level operational summary for staff |  |  |  |
+| 2 |  | Donors & Contributions page allows staff to view, create, and manage supporters and contributions |  |  |  |
+| 2 |  | Caseload Inventory page allows staff to view, create, update, search, and filter resident records |  |  |  |
+| 1 |  | Process Recording page allows staff to enter and view dated session notes chronologically |  |  |  |
+| 1 |  | Home Visitation & Case Conferences page allows staff to log visits and view case conference history/upcoming conferences |  |  |  |
+| 1 |  | Reports & Analytics page shows meaningful charts or summaries for donations, outcomes, or safehouse/program performance |  |  |  |
+| 1 |  | At least one additional page or feature required by the case is implemented and usable |  |  |  |
+| 2 |  | Database is deployed separately from the app |  |  |  |
+| 1 |  | Data validation, error handling, and code quality are present throughout the project |  |  |  |
+| 0 |  | (BONUS) Up to 1 point for advanced or impressive use of React/.NET features |  |  |  |
+| 20 | 0 |  |  |  |  |
+
 ## IS 414 \- Security 
 
 The IS414 portion of INTEX includes BOTH applying skills you have already learned AND learning how to implement a few new skills now that you have sufficient technical background to complete them.   
