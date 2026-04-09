@@ -398,18 +398,11 @@ export const deleteResidentPlan = (id: string, planId: string) =>
     recommendations: string[];
   }
   
-  export const predictSocialMediaPost = async (
-    input: SocialMediaPredictionInput
-  ): Promise<SocialMediaPredictionResult> => {
-    const res = await fetch('/api/ML/social-media/predict', {
+  export const predictSocialMediaPost = (input: SocialMediaPredictionInput) =>
+    apiFetch<SocialMediaPredictionResult>('/ML/social-media/predict', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify(input),
     });
-    if (!res.ok) throw new Error('Prediction failed');
-    return res.json();
-  };
 export const fetchSocialPosts = () => apiFetch<SocialMediaPost[]>('/social-media-posts');
 
 export const fetchImpactStats = () => apiFetch<ImpactStats>('/Analytics/impact');
