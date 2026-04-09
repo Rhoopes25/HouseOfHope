@@ -24,6 +24,7 @@ import SocialMediaAnalytics from "./pages/SocialMediaAnalytics";
 import HomeVisitCaseConferences from "./pages/HomeVisitCaseConferences";
 import ProcessRecording from "./pages/ProcessRecording";
 import DonorPortal from "./pages/DonorPortal";
+import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,12 @@ const App = () => (
               <Route path="/donor-portal" element={
                 <ProtectedRoute requiredRole="donor">
                   <DonorPortal />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <ProfilePage />
                 </ProtectedRoute>
               } />
 

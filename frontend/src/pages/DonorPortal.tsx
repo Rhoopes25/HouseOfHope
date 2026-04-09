@@ -1,19 +1,20 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createMyDonation, fetchImpactStats, fetchMyDonations } from '@/lib/api-endpoints';
+import { createMyDonation, fetchMyDonations } from '@/lib/api-endpoints';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatCard } from '@/components/StatCard';
 import { PublicNavbar } from '@/components/PublicNavbar';
 import { SiteFooter } from '@/components/SiteFooter';
 import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Heart, DollarSign, Clock, Package, Megaphone } from 'lucide-react';
+import { EditableSelect } from '@/components/EditableSelect';
+import { mergeDistinctOptions } from '@/lib/residentFieldOptions';
+import { Heart, DollarSign, Clock, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,7 +28,7 @@ export default function DonorPortal() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const donationsQ = useQuery({ queryKey: ['my-donations'], queryFn: fetchMyDonations });
-  const impactQ = useQuery({ queryKey: ['impact'], queryFn: fetchImpactStats });
+  const campaignSourceSeeds = ['Donor Portal', 'Facebook', 'Instagram', 'Website', 'Church Network', 'Referral'];
   const [amount, setAmount] = useState('1000');
   const [donationType, setDonationType] = useState<'monetary' | 'time' | 'in-kind' | 'skills' | 'social-media'>('monetary');
   const [inputCurrency, setInputCurrency] = useState<'PHP' | 'USD' | 'EUR'>('PHP');
@@ -114,6 +115,10 @@ export default function DonorPortal() {
       }),
     [donationsQ.data],
   );
+  const campaignSourceOptions = useMemo(
+    () => mergeDistinctOptions(myDonations.map((d) => d.campaignName).filter(Boolean) as string[], campaignSourceSeeds),
+    [myDonations],
+  );
 
   const totalGiven = myDonations
     .filter(d => d.type === 'monetary')
@@ -124,7 +129,6 @@ export default function DonorPortal() {
   const inKindEstimated = myDonations
     .filter(d => d.type === 'in-kind')
     .reduce((s, d) => s + (d.amount || 0), 0);
-  const socialCampaigns = myDonations.filter(d => d.type === 'social-media').length;
   const formattedTotalGiven = totalGiven.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const formattedHours = totalHours.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const formattedInKind = inKindEstimated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -139,9 +143,7 @@ export default function DonorPortal() {
     for (const d of myDonations) groups[d.type] = (groups[d.type] ?? 0) + 1;
     return groups;
   }, [myDonations]);
-  const impact = impactQ.data;
-
-  const loading = donationsQ.isLoading || impactQ.isLoading;
+  const loading = donationsQ.isLoading;
 
   const amountLabel = donationType === 'monetary'
     ? `Amount (${inputCurrency})`
@@ -212,10 +214,14 @@ export default function DonorPortal() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="font-display text-lg">Make a Donation (Simulation)</CardTitle>
+              <CardTitle className="font-display text-lg">Record Donation</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Donor</Label>
+                  <Input value={user?.displayName || user?.username || 'Logged-in donor'} disabled />
+                </div>
                 <div>
                   <Label>Donation Type</Label>
                   <Select
@@ -256,10 +262,16 @@ export default function DonorPortal() {
                   <Label htmlFor="donation-date">Donation Date</Label>
                   <Input id="donation-date" type="date" value={donationDate} onChange={(e) => setDonationDate(e.target.value)} />
                 </div>
-                <div>
-                  <Label htmlFor="donation-campaign">Campaign / Source (optional)</Label>
-                  <Input id="donation-campaign" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Spring Outreach Campaign" />
-                </div>
+                <EditableSelect
+                  label="Campaign / Source"
+                  value={campaignName}
+                  customValue={campaignName}
+                  options={campaignSourceOptions}
+                  onChange={setCampaignName}
+                  onCustomChange={setCampaignName}
+                  placeholder="Select campaign/source"
+                  allowEmpty
+                />
                 <div className="sm:col-span-2">
                   <Label htmlFor="donation-notes">Notes (optional)</Label>
                   <Textarea id="donation-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={notesPlaceholder} />
@@ -311,50 +323,6 @@ export default function DonorPortal() {
                   )}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Your Impact + Program Snapshot</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Your personal activity plus anonymized organization-wide outcomes.
-              </p>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 rounded-lg bg-secondary/50 text-center">
-                  <p className="text-2xl font-display font-bold text-primary">{socialCampaigns}</p>
-                  <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><Megaphone className="h-3 w-3" /> Social campaigns supported</p>
-                </div>
-                <div className="p-4 rounded-lg bg-secondary/50 text-center">
-                  <p className="text-2xl font-display font-bold text-primary">{impact?.totalResidentsServed ?? '—'}</p>
-                  <p className="text-xs text-muted-foreground">Residents in program data</p>
-                </div>
-                <div className="p-4 rounded-lg bg-secondary/50 text-center">
-                  <p className="text-2xl font-display font-bold text-primary">{impact?.educationEnrollmentRate ?? '—'}%</p>
-                  <p className="text-xs text-muted-foreground">Education progress (avg)</p>
-                </div>
-                <div className="p-4 rounded-lg bg-secondary/50 text-center">
-                  <p className="text-2xl font-display font-bold text-primary">{impact?.healthImprovementRate ?? '—'}%</p>
-                  <p className="text-xs text-muted-foreground">Health score (normalized)</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg">Supported Programs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">Safe shelter network</Badge>
-                <Badge variant="secondary">Education & tutoring</Badge>
-                <Badge variant="secondary">Mental health services</Badge>
-                <Badge variant="secondary">Life skills training</Badge>
-                <Badge variant="secondary">Reintegration program</Badge>
-              </div>
             </CardContent>
           </Card>
         </div>

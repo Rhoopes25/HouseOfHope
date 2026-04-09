@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using HouseOfHope.API.Contracts;
 using HouseOfHope.API.Data;
+using HouseOfHope.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -286,6 +287,151 @@ public class AuthController(
         await signInManager.SignOutAsync();
         return Ok(new { message = "Logout successful." });
     }
+
+    [HttpGet("profile")]
+    [Authorize(Roles = $"{AuthRoles.Donor},{AuthRoles.Admin}")]
+    public async Task<ActionResult<UserProfileDto>> GetProfile()
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user == null) return Unauthorized();
+
+        var email = user.Email?.Trim();
+        var claimDisplayName = User.FindFirstValue("supporter_display_name")?.Trim();
+        var supporter = !string.IsNullOrWhiteSpace(email)
+            ? await lighthouseDb.Supporters.FirstOrDefaultAsync(s => s.Email != null && s.Email.ToLower() == email.ToLower())
+            : null;
+
+        return new UserProfileDto
+        {
+            UserName = user.UserName ?? "",
+            Email = user.Email ?? "",
+            DisplayName = claimDisplayName ?? supporter?.DisplayName ?? user.UserName ?? "",
+            SupporterType = HouseOfHopeMapper.MapSupporterType(supporter?.SupporterType),
+            Status = string.Equals(supporter?.Status, "Inactive", StringComparison.OrdinalIgnoreCase) ? "inactive" : "active",
+            Country = supporter?.Country ?? "",
+            AcquisitionChannel = supporter?.AcquisitionChannel ?? "",
+            FirstDonationDate = supporter?.FirstDonationDate ?? ""
+        };
+    }
+
+    [HttpPut("profile")]
+    [Authorize(Roles = $"{AuthRoles.Donor},{AuthRoles.Admin}")]
+    public async Task<ActionResult<UserProfileDto>> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user == null) return Unauthorized();
+
+        var originalEmail = user.Email?.Trim();
+        var nextEmail = string.IsNullOrWhiteSpace(request.Email) ? originalEmail : request.Email.Trim();
+        if (string.IsNullOrWhiteSpace(nextEmail))
+        {
+            return BadRequest(new { message = "Email is required." });
+        }
+
+        if (!string.Equals(originalEmail, nextEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            var emailOwner = await userManager.FindByEmailAsync(nextEmail);
+            if (emailOwner != null && emailOwner.Id != user.Id)
+            {
+                return BadRequest(new { message = "That email is already used by another account." });
+            }
+            user.Email = nextEmail;
+            user.UserName = nextEmail;
+            var emailUpdateResult = await userManager.UpdateAsync(user);
+            if (!emailUpdateResult.Succeeded)
+            {
+                var message = emailUpdateResult.Errors.FirstOrDefault()?.Description ?? "Unable to update account email.";
+                return BadRequest(new { message });
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+            {
+                return BadRequest(new { message = "Current password is required to set a new password." });
+            }
+            var passwordResult = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            if (!passwordResult.Succeeded)
+            {
+                var message = passwordResult.Errors.FirstOrDefault()?.Description ?? "Unable to update password.";
+                return BadRequest(new { message });
+            }
+        }
+
+        var displayName = request.DisplayName?.Trim();
+        var effectiveDisplayName = string.IsNullOrWhiteSpace(displayName)
+            ? (User.FindFirstValue("supporter_display_name")?.Trim() ?? user.UserName ?? "")
+            : displayName;
+        var existingNameClaim = (await userManager.GetClaimsAsync(user)).FirstOrDefault(c => c.Type == "supporter_display_name");
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            var newClaim = new Claim("supporter_display_name", displayName);
+            IdentityResult claimResult = existingNameClaim == null
+                ? await userManager.AddClaimAsync(user, newClaim)
+                : await userManager.ReplaceClaimAsync(user, existingNameClaim, newClaim);
+            if (!claimResult.Succeeded)
+            {
+                var message = claimResult.Errors.FirstOrDefault()?.Description ?? "Unable to update display name.";
+                return BadRequest(new { message });
+            }
+            effectiveDisplayName = displayName;
+        }
+
+        var supporter = await lighthouseDb.Supporters.FirstOrDefaultAsync(s =>
+            (originalEmail != null && s.Email != null && s.Email.ToLower() == originalEmail.ToLower()) ||
+            (nextEmail != null && s.Email != null && s.Email.ToLower() == nextEmail.ToLower()));
+        if (supporter == null)
+        {
+            supporter = new Supporter
+            {
+                DisplayName = effectiveDisplayName,
+                Email = nextEmail,
+                SupporterType = "MonetaryDonor",
+                Status = "Active",
+                AcquisitionChannel = "Website"
+            };
+            lighthouseDb.Supporters.Add(supporter);
+        }
+
+        supporter.DisplayName = effectiveDisplayName;
+        supporter.Email = nextEmail;
+        supporter.SupporterType = NormalizeSupporterType(request.SupporterType ?? HouseOfHopeMapper.MapSupporterType(supporter.SupporterType));
+        supporter.Status = NormalizeSupporterStatus(request.Status ?? "active");
+        supporter.Country = request.Country?.Trim() ?? supporter.Country;
+        supporter.AcquisitionChannel = request.AcquisitionChannel?.Trim() ?? supporter.AcquisitionChannel;
+        supporter.FirstDonationDate = request.FirstDonationDate?.Trim() ?? supporter.FirstDonationDate;
+
+        await lighthouseDb.SaveChangesAsync();
+
+        return new UserProfileDto
+        {
+            UserName = user.UserName ?? "",
+            Email = user.Email ?? "",
+            DisplayName = effectiveDisplayName,
+            SupporterType = HouseOfHopeMapper.MapSupporterType(supporter.SupporterType),
+            Status = string.Equals(supporter.Status, "Inactive", StringComparison.OrdinalIgnoreCase) ? "inactive" : "active",
+            Country = supporter.Country ?? "",
+            AcquisitionChannel = supporter.AcquisitionChannel ?? "",
+            FirstDonationDate = supporter.FirstDonationDate ?? ""
+        };
+    }
+
+    private static string NormalizeSupporterStatus(string? raw) =>
+        string.Equals(raw, "inactive", StringComparison.OrdinalIgnoreCase)
+            ? "Inactive"
+            : "Active";
+
+    private static string NormalizeSupporterType(string? raw) => raw?.Trim().ToLowerInvariant() switch
+    {
+        "monetary" => "MonetaryDonor",
+        "in-kind" => "InKindDonor",
+        "volunteer" => "Volunteer",
+        "skills" => "SkillsContributor",
+        "social-media" => "SocialMediaAdvocate",
+        "partner" => "PartnerOrganization",
+        _ => raw ?? "MonetaryDonor"
+    };
 }
 
 public class RegisterRequest
@@ -306,4 +452,29 @@ public class LinkDonorLoginRequest
 {
     public int SupporterId { get; set; }
     public string UserId { get; set; } = "";
+}
+
+public class UserProfileDto
+{
+    public string UserName { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string SupporterType { get; set; } = "monetary";
+    public string Status { get; set; } = "active";
+    public string Country { get; set; } = "";
+    public string AcquisitionChannel { get; set; } = "";
+    public string FirstDonationDate { get; set; } = "";
+}
+
+public class UpdateProfileRequest
+{
+    public string? Email { get; set; }
+    public string? DisplayName { get; set; }
+    public string? SupporterType { get; set; }
+    public string? Status { get; set; }
+    public string? Country { get; set; }
+    public string? AcquisitionChannel { get; set; }
+    public string? FirstDonationDate { get; set; }
+    public string? CurrentPassword { get; set; }
+    public string? NewPassword { get; set; }
 }
