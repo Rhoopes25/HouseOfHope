@@ -13,6 +13,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<SocialMediaPredictionService>();
 builder.Services.AddScoped<CaseManagementPredictionService>();
+builder.Services.AddScoped<DonorChurnPredictionService>();
 
 if (builder.Environment.IsDevelopment())
 {
