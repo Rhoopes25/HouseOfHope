@@ -13,8 +13,15 @@ namespace HouseOfHope.API.Controllers;
 public class ResidentsController : ControllerBase
 {
     private readonly LighthouseDbContext _db;
+    private readonly CaseManagementPredictionService _casePredictions;
 
-    public ResidentsController(LighthouseDbContext db) => _db = db;
+    public ResidentsController(
+        LighthouseDbContext db,
+        CaseManagementPredictionService casePredictions)
+    {
+        _db = db;
+        _casePredictions = casePredictions;
+    }
 
     [HttpGet]
     public async Task<ActionResult<List<ResidentDto>>> GetAll(CancellationToken ct)
@@ -26,7 +33,13 @@ public class ResidentsController : ControllerBase
             .ToListAsync(ct);
         var ids = rows.Select(r => r.ResidentId).ToList();
         var readiness = await HouseOfHopeMapper.GetReadinessScoresAsync(_db, ids);
-        return rows.Select(r => HouseOfHopeMapper.ToResidentDto(r, readiness[r.ResidentId])).ToList();
+        var predictions = await _casePredictions.PredictForResidentsAsync(rows, ct);
+        return rows.Select(r =>
+                HouseOfHopeMapper.ToResidentDto(
+                    r,
+                    readiness[r.ResidentId],
+                    predictions.GetValueOrDefault(r.ResidentId)))
+            .ToList();
     }
 
     [HttpGet("{id:int}")]
@@ -38,7 +51,8 @@ public class ResidentsController : ControllerBase
             .FirstOrDefaultAsync(x => x.ResidentId == id, ct);
         if (r == null) return NotFound();
         var readiness = await HouseOfHopeMapper.GetReadinessScoresAsync(_db, [id]);
-        return HouseOfHopeMapper.ToResidentDto(r, readiness[id]);
+        var prediction = await _casePredictions.PredictForResidentAsync(id, ct);
+        return HouseOfHopeMapper.ToResidentDto(r, readiness[id], prediction);
     }
 
     [HttpPost]
@@ -91,7 +105,10 @@ public class ResidentsController : ControllerBase
             .Include(r => r.Safehouse)
             .FirstAsync(r => r.ResidentId == entity.ResidentId, ct);
         var readiness = await HouseOfHopeMapper.GetReadinessScoresAsync(_db, [entity.ResidentId]);
-        return Created($"/api/residents/{entity.ResidentId}", HouseOfHopeMapper.ToResidentDto(created, readiness[entity.ResidentId]));
+        var prediction = await _casePredictions.PredictForResidentAsync(entity.ResidentId, ct);
+        return Created(
+            $"/api/residents/{entity.ResidentId}",
+            HouseOfHopeMapper.ToResidentDto(created, readiness[entity.ResidentId], prediction));
     }
 
     [HttpPut("{id:int}")]

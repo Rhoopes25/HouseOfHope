@@ -1,5 +1,6 @@
 using HouseOfHope.API.Data;
 using HouseOfHope.API.Infrastructure;
+using HouseOfHope.API.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,8 @@ const string FrontendCorsPolicy = "Frontend";
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<SocialMediaPredictionService>();
+builder.Services.AddScoped<CaseManagementPredictionService>();
 
 if (builder.Environment.IsDevelopment())
 {

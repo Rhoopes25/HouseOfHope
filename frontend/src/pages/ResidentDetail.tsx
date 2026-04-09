@@ -612,6 +612,33 @@ export default function ResidentDetail() {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Derived from latest education and health records in the database</p>
               </div>
+              <div className="mt-4 border rounded-lg p-3 bg-muted/20">
+                <p className="text-sm font-medium text-foreground">Case Management Prediction</p>
+                {resident.casePrediction?.modelAvailable ? (
+                  <div className="space-y-1 mt-2 text-sm">
+                    <p>
+                      Risk escalation (30d):{' '}
+                      <span className="font-semibold">
+                        {Math.round((resident.casePrediction.riskEscalationProbability ?? 0) * 100)}%
+                      </span>{' '}
+                      · tier <span className="capitalize">{resident.casePrediction.riskEscalationTier}</span>
+                    </p>
+                    <p>
+                      Reintegration success (90d):{' '}
+                      <span className="font-semibold">
+                        {Math.round((resident.casePrediction.reintegrationSuccessProbability ?? 0) * 100)}%
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Model {resident.casePrediction.modelVersion} · scored {new Date(resident.casePrediction.scoredAtUtc).toLocaleString()}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Prediction model unavailable. Caseload still uses operational records.
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -672,6 +699,21 @@ export default function ResidentDetail() {
                     <p className="text-muted-foreground mb-1">Initial Assessment</p>
                     <p className="text-foreground leading-relaxed">{resident.initialAssessment}</p>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle className="font-display text-lg">Prediction Recommendations</CardTitle></CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  {resident.casePrediction?.modelAvailable ? (
+                    <>
+                      {resident.casePrediction.recommendedActions.map((action, idx) => (
+                        <p key={`${action}-${idx}`} className="text-foreground">- {action}</p>
+                      ))}
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">No model recommendations available for this resident.</p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

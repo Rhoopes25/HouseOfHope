@@ -74,6 +74,7 @@ export default function CaseloadInventory() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [riskFilter, setRiskFilter] = useState<string>('all');
+  const [mlRiskFilter, setMlRiskFilter] = useState<string>('all');
   const [safehouseFilter, setSafehouseFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [openCreate, setOpenCreate] = useState(false);
@@ -89,9 +90,14 @@ export default function CaseloadInventory() {
         r.assignedSocialWorker.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'all' || r.caseStatus === statusFilter;
     const matchesRisk = riskFilter === 'all' || r.riskLevel === riskFilter;
+    const predictedTier = r.casePrediction?.riskEscalationTier ?? 'unknown';
+    const matchesMlRisk =
+      mlRiskFilter === 'all' ||
+      (mlRiskFilter === 'none' && !r.casePrediction?.modelAvailable) ||
+      predictedTier === mlRiskFilter;
     const matchesSafehouse = safehouseFilter === 'all' || r.safehouse === safehouseFilter;
     const matchesCategory = categoryFilter === 'all' || r.caseCategory === categoryFilter;
-    return matchesSearch && matchesStatus && matchesRisk && matchesSafehouse && matchesCategory;
+    return matchesSearch && matchesStatus && matchesRisk && matchesMlRisk && matchesSafehouse && matchesCategory;
   });
 
   const sortedFiltered = useMemo(() => {
@@ -114,6 +120,16 @@ export default function CaseloadInventory() {
           return compareText(a.assignedSocialWorker, b.assignedSocialWorker, sortDir);
         case 'reintegrationStatus':
           return compareText(a.reintegrationStatus, b.reintegrationStatus, sortDir);
+        case 'mlRiskTier':
+          return compareText(
+            a.casePrediction?.riskEscalationTier ?? 'unknown',
+            b.casePrediction?.riskEscalationTier ?? 'unknown',
+            sortDir,
+          );
+        case 'mlRiskScore':
+          return sortDir === 'asc'
+            ? (a.casePrediction?.riskEscalationProbability ?? -1) - (b.casePrediction?.riskEscalationProbability ?? -1)
+            : (b.casePrediction?.riskEscalationProbability ?? -1) - (a.casePrediction?.riskEscalationProbability ?? -1);
         default:
           return 0;
       }
@@ -313,6 +329,17 @@ export default function CaseloadInventory() {
               <SelectItem value="critical">Critical</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={mlRiskFilter} onValueChange={v => { setMlRiskFilter(v); setCurrentPage(1); }}>
+            <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Predicted Risk" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Predicted Risk</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="unknown">Unknown</SelectItem>
+              <SelectItem value="none">Model Unavailable</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={safehouseFilter} onValueChange={v => { setSafehouseFilter(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Safehouse" /></SelectTrigger>
             <SelectContent>
@@ -384,6 +411,20 @@ export default function CaseloadInventory() {
                       Risk
                     </SortableTableHead>
                     <SortableTableHead
+                      active={sortKey === 'mlRiskTier'}
+                      direction={sortKey === 'mlRiskTier' ? sortDir : null}
+                      onSort={() => handleColumnSort('mlRiskTier')}
+                    >
+                      Predicted Tier
+                    </SortableTableHead>
+                    <SortableTableHead
+                      active={sortKey === 'mlRiskScore'}
+                      direction={sortKey === 'mlRiskScore' ? sortDir : null}
+                      onSort={() => handleColumnSort('mlRiskScore')}
+                    >
+                      Predicted Score
+                    </SortableTableHead>
+                    <SortableTableHead
                       active={sortKey === 'assignedSocialWorker'}
                       direction={sortKey === 'assignedSocialWorker' ? sortDir : null}
                       onSort={() => handleColumnSort('assignedSocialWorker')}
@@ -409,6 +450,14 @@ export default function CaseloadInventory() {
                         <TableCell><StatusPill status={r.caseStatus} /></TableCell>
                         <TableCell className="text-sm">{formatCaseCategoryLabel(r.caseCategory)}</TableCell>
                         <TableCell><RiskBadge level={r.riskLevel} /></TableCell>
+                        <TableCell className="text-sm capitalize">
+                          {r.casePrediction?.riskEscalationTier ?? 'unknown'}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {r.casePrediction?.modelAvailable
+                            ? `${Math.round((r.casePrediction.riskEscalationProbability ?? 0) * 100)}%`
+                            : 'Unavailable'}
+                        </TableCell>
                         <TableCell className="text-sm">{r.assignedSocialWorker}</TableCell>
                         <TableCell className="text-sm">{r.reintegrationStatus}</TableCell>
                         <TableCell>
@@ -444,6 +493,13 @@ export default function CaseloadInventory() {
                       <p><span className="font-medium">Safehouse:</span> {displaySafehouseName(r.safehouse)}</p>
                       <p><span className="font-medium">Category:</span> {r.caseCategory}</p>
                       <p><span className="font-medium">Social Worker:</span> {r.assignedSocialWorker}</p>
+                      <p><span className="font-medium">Predicted Tier:</span> {r.casePrediction?.riskEscalationTier ?? 'unknown'}</p>
+                      <p>
+                        <span className="font-medium">Predicted Score:</span>{' '}
+                        {r.casePrediction?.modelAvailable
+                          ? `${Math.round((r.casePrediction.riskEscalationProbability ?? 0) * 100)}%`
+                          : 'Unavailable'}
+                      </p>
                       <p><span className="font-medium">Reintegration:</span> {r.reintegrationStatus}</p>
                     </div>
                   </div>

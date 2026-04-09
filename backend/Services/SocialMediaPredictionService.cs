@@ -38,8 +38,10 @@ public class SocialMediaPredictionResult
 
 public class SocialMediaPredictionService
 {
-    private readonly InferenceSession _donationSession;
-    private readonly InferenceSession _engagementSession;
+    private readonly ILogger<SocialMediaPredictionService> _logger;
+    private readonly InferenceSession? _donationSession;
+    private readonly InferenceSession? _engagementSession;
+    private readonly bool _modelsAvailable;
 
     private static readonly string[] NumericFeatures = new[]
     {
@@ -56,21 +58,46 @@ public class SocialMediaPredictionService
         "call_to_action_type", "content_topic", "sentiment_tone"
     };
 
-    public SocialMediaPredictionService(IWebHostEnvironment env)
+    public SocialMediaPredictionService(IWebHostEnvironment env, ILogger<SocialMediaPredictionService> logger)
     {
-        var basePath = env.ContentRootPath;
-        var donationPath = Path.Combine(basePath, "Models", "social_media_donation.onnx");
-        var engagementPath = Path.Combine(basePath, "Models", "social_media_engagement.onnx");
-        _donationSession = new InferenceSession(donationPath);
-        _engagementSession = new InferenceSession(engagementPath);
+        _logger = logger;
+        try
+        {
+            var basePath = env.ContentRootPath;
+            var donationPath = Path.Combine(basePath, "Models", "social_media_donation.onnx");
+            var engagementPath = Path.Combine(basePath, "Models", "social_media_engagement.onnx");
+            if (!File.Exists(donationPath) || !File.Exists(engagementPath))
+            {
+                _logger.LogWarning(
+                    "Social ONNX model file(s) missing. donation={DonationPath} engagement={EngagementPath}",
+                    donationPath,
+                    engagementPath);
+                _modelsAvailable = false;
+                return;
+            }
+
+            _donationSession = new InferenceSession(donationPath);
+            _engagementSession = new InferenceSession(engagementPath);
+            ValidateInputs(_donationSession, "social_media_donation");
+            ValidateInputs(_engagementSession, "social_media_engagement");
+            _modelsAvailable = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize social media ONNX inference sessions.");
+            _modelsAvailable = false;
+        }
     }
 
     public SocialMediaPredictionResult Predict(SocialMediaPredictionInput input)
     {
+        if (!_modelsAvailable || _donationSession == null || _engagementSession == null)
+            throw new InvalidOperationException("Social media prediction model is unavailable.");
+
         var inputs = BuildInputs(input);
 
-        var donationOutputs = _donationSession.Run(inputs);
-        var engagementOutputs = _engagementSession.Run(inputs);
+        using var donationOutputs = _donationSession.Run(inputs);
+        using var engagementOutputs = _engagementSession.Run(inputs);
 
         var donationValue = donationOutputs.First().AsEnumerable<float>().First();
         var engagementValue = engagementOutputs.First().AsEnumerable<float>().First();
@@ -81,6 +108,17 @@ public class SocialMediaPredictionService
             EngagementRate = engagementValue,
             Recommendations = GetRecommendations(input)
         };
+    }
+
+    private static void ValidateInputs(InferenceSession session, string modelName)
+    {
+        var missingNumeric = NumericFeatures.Where(name => !session.InputMetadata.ContainsKey(name)).ToList();
+        var missingCategorical = CategoricalFeatures.Where(name => !session.InputMetadata.ContainsKey(name)).ToList();
+        if (missingNumeric.Count > 0 || missingCategorical.Count > 0)
+        {
+            var missing = string.Join(", ", missingNumeric.Concat(missingCategorical));
+            throw new InvalidOperationException($"ONNX input schema mismatch for {modelName}. Missing: {missing}");
+        }
     }
 
     private List<NamedOnnxValue> BuildInputs(SocialMediaPredictionInput input)

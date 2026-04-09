@@ -27,6 +27,20 @@ public class ResidentDto
     public bool IsInformalSettler { get; set; }
     public bool ParentWithDisability { get; set; }
     public int ReintegrationReadinessScore { get; set; }
+    public CaseManagementPredictionDto? CasePrediction { get; set; }
+}
+
+public class CaseManagementPredictionDto
+{
+    public bool ModelAvailable { get; set; }
+    public string ModelVersion { get; set; } = "";
+    public string ScoredAtUtc { get; set; } = "";
+    public double RiskEscalationProbability { get; set; }
+    public string RiskEscalationTier { get; set; } = "";
+    public bool RiskEscalationFlag { get; set; }
+    public double ReintegrationSuccessProbability { get; set; }
+    public bool ReintegrationLikelyWithin90d { get; set; }
+    public List<string> RecommendedActions { get; set; } = [];
 }
 
 public class CounselingSessionDto

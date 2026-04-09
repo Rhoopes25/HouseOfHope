@@ -1,5 +1,6 @@
 import { apiFetch } from './api';
 import type {
+  CaseManagementPrediction,
   CounselingSession,
   Donation,
   InterventionPlan,
@@ -82,6 +83,8 @@ export interface UnlinkedLogin {
 export const fetchResidents = () => apiFetch<Resident[]>('/Residents');
 
 export const fetchResident = (id: string) => apiFetch<Resident>(`/Residents/${id}`);
+export const fetchCaseManagementPrediction = (residentId: string) =>
+  apiFetch<CaseManagementPrediction>(`/ML/case-management/predict/${residentId}`);
 
 export const fetchResidentSessions = (id: string) =>
   apiFetch<CounselingSession[]>(`/Residents/${id}/sessions`);

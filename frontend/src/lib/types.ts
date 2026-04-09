@@ -10,6 +10,18 @@ export interface User {
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type CaseStatus = 'active' | 'closed' | 'transferred';
 
+export interface CaseManagementPrediction {
+  modelAvailable: boolean;
+  modelVersion: string;
+  scoredAtUtc: string;
+  riskEscalationProbability: number;
+  riskEscalationTier: 'low' | 'medium' | 'high' | 'unknown';
+  riskEscalationFlag: boolean;
+  reintegrationSuccessProbability: number;
+  reintegrationLikelyWithin90d: boolean;
+  recommendedActions: string[];
+}
+
 export interface Resident {
   id: string;
   caseControlNumber: string;
@@ -36,6 +48,7 @@ export interface Resident {
   isInformalSettler: boolean;
   parentWithDisability: boolean;
   reintegrationReadinessScore: number;
+  casePrediction?: CaseManagementPrediction | null;
 }
 
 export interface CounselingSession {

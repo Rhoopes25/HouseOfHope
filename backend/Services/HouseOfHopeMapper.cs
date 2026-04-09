@@ -100,7 +100,10 @@ public static class HouseOfHopeMapper
         return dict;
     }
 
-    public static ResidentDto ToResidentDto(Resident r, int readiness)
+    public static ResidentDto ToResidentDto(
+        Resident r,
+        int readiness,
+        CaseManagementPredictionResult? prediction = null)
     {
         return new ResidentDto
         {
@@ -128,7 +131,21 @@ public static class HouseOfHopeMapper
             IndigenousGroup = r.FamilyIndigenous != 0 ? "Indigenous" : "",
             IsInformalSettler = r.FamilyInformalSettler != 0,
             ParentWithDisability = r.FamilyParentPwd != 0,
-            ReintegrationReadinessScore = readiness
+            ReintegrationReadinessScore = readiness,
+            CasePrediction = prediction == null
+                ? null
+                : new CaseManagementPredictionDto
+                {
+                    ModelAvailable = prediction.ModelAvailable,
+                    ModelVersion = prediction.ModelVersion,
+                    ScoredAtUtc = prediction.ScoredAtUtc,
+                    RiskEscalationProbability = prediction.RiskEscalationProbability,
+                    RiskEscalationTier = prediction.RiskEscalationTier,
+                    RiskEscalationFlag = prediction.RiskEscalationFlag,
+                    ReintegrationSuccessProbability = prediction.ReintegrationSuccessProbability,
+                    ReintegrationLikelyWithin90d = prediction.ReintegrationLikelyWithin90d,
+                    RecommendedActions = prediction.RecommendedActions
+                }
         };
     }
 
