@@ -1,0 +1,95 @@
+{
+  "numeric_features": [
+    "lifetime_value_php",
+    "gift_count",
+    "gift_count_positive",
+    "avg_gift_php",
+    "max_gift_php",
+    "days_since_last_gift",
+    "days_since_first_gift",
+    "days_between_first_last_gift",
+    "freq_90d",
+    "freq_180d",
+    "freq_prior_90d",
+    "freq_trend_ratio",
+    "avg_gift_90d_php",
+    "campaign_diversity",
+    "has_recurring"
+  ],
+  "categorical_features": [
+    "acquisition_channel",
+    "primary_campaign"
+  ],
+  "imputer_medians": [
+    1404.16,
+    3.0,
+    2.0,
+    531.7485714285714,
+    1021.77,
+    102.0,
+    385.0,
+    212.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    697.94,
+    1.0,
+    0.0
+  ],
+  "scaler_means": [
+    2314.5373930753567,
+    3.672097759674134,
+    2.8105906313645623,
+    582.4231259362385,
+    1112.9215478615072,
+    139.23828920570264,
+    400.0835030549898,
+    260.8452138492872,
+    0.505091649694501,
+    0.9735234215885947,
+    0.4684317718940937,
+    0.4740325865580448,
+    762.9961507128312,
+    1.0366598778004072,
+    0.3340122199592668
+  ],
+  "scaler_stds": [
+    2398.1147203969726,
+    3.0448807625357275,
+    2.576481808712233,
+    397.507439529808,
+    837.9773789074123,
+    127.80716062032997,
+    245.84538704377215,
+    239.468795343961,
+    0.7641899600640245,
+    1.100505164952381,
+    0.7473792533914193,
+    0.7363001978045801,
+    421.7853245362469,
+    0.8459079916547677,
+    0.47164399378890554
+  ],
+  "categorical_categories": {
+    "acquisition_channel": [
+      "Church",
+      "Event",
+      "PartnerReferral",
+      "SocialMedia",
+      "Website",
+      "WordOfMouth"
+    ],
+    "primary_campaign": [
+      "(No campaign name)",
+      "Back to School",
+      "GivingTuesday",
+      "Summer of Safety",
+      "Year-End Hope"
+    ]
+  },
+  "medium_cut": 0.6678630826747726,
+  "high_cut": 0.6833175481830561,
+  "n_transformed_features": 26,
+  "model_version": "churn-logreg-v1"
+}

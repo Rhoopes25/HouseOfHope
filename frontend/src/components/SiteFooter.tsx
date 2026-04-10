@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { applyTheme, readThemeFromCookie, type DisplayTheme } from '@/lib/themeCookie';
+import { useCookieConsent } from '@/contexts/CookieConsentContext';
+import { applyTheme, readThemeFromCookie, setThemeOnDocument, type DisplayTheme } from '@/lib/themeCookie';
 import { cn } from '@/lib/utils';
 
 /**
@@ -10,12 +11,13 @@ import { cn } from '@/lib/utils';
  * (original `bg-foreground` look in light; warm charcoal in warm-dark).
  */
 export function SiteFooter() {
+  const { openCookiePreferences } = useCookieConsent();
   const [theme, setTheme] = useState<DisplayTheme>('light');
 
   useEffect(() => {
     const saved = readThemeFromCookie();
     setTheme(saved);
-    applyTheme(saved);
+    setThemeOnDocument(saved);
   }, []);
 
   const toggle = () => {
@@ -40,6 +42,13 @@ export function SiteFooter() {
           <div className="flex flex-col sm:flex-row gap-8 lg:gap-12 w-full lg:w-auto">
             <div className="flex flex-col gap-2">
               <Link to="/privacy" className="text-sm opacity-70 hover:opacity-100 transition-opacity">Privacy Policy</Link>
+              <button
+                type="button"
+                onClick={openCookiePreferences}
+                className="text-sm text-left opacity-70 hover:opacity-100 transition-opacity"
+              >
+                Cookie preferences
+              </button>
               <Link to="/impact" className="text-sm opacity-70 hover:opacity-100 transition-opacity">Donor Impact</Link>
               <Link to="/login" className="text-sm opacity-70 hover:opacity-100 transition-opacity">Staff Login</Link>
             </div>

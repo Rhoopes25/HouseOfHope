@@ -297,13 +297,12 @@ public sealed class DonorChurnPredictionService : IDisposable
         }
 
         // 3. One-hot encode categorical features
-        var channelOhe = OneHotEncode(
-            f.AcquisitionChannel,
-            _meta!.CategoricalCategories["acquisition_channel"]);
+        var catCats = _meta!.CategoricalCategories;
+        var channelKey = catCats.Keys.FirstOrDefault(k => k.Equals("acquisition_channel", StringComparison.OrdinalIgnoreCase)) ?? "acquisition_channel";
+        var campaignKey = catCats.Keys.FirstOrDefault(k => k.Equals("primary_campaign", StringComparison.OrdinalIgnoreCase)) ?? "primary_campaign";
 
-        var campaignOhe = OneHotEncode(
-            f.PrimaryCampaign,
-            _meta!.CategoricalCategories["primary_campaign"]);
+        var channelOhe = OneHotEncode(f.AcquisitionChannel, catCats.GetValueOrDefault(channelKey, []));
+        var campaignOhe = OneHotEncode(f.PrimaryCampaign, catCats.GetValueOrDefault(campaignKey, []));
 
         // Concatenate: [scaled numeric | channel OHE | campaign OHE]
         return [.. numericScaled, .. channelOhe, .. campaignOhe];
@@ -328,10 +327,12 @@ public sealed class DonorChurnPredictionService : IDisposable
         };
 
         using var outputs = _session.Run(inputs);
-        // outputs[0] = predicted class labels, outputs[1] = probabilities
-        var probabilities = outputs[1].AsEnumerable<float>().ToArray();
-        // probabilities: [prob_class_0, prob_class_1] per row
-        return Math.Clamp(probabilities[1], 0.0, 1.0);
+        
+        // Get probabilities by name, not by index
+        var probTensor = outputs.First(o => o.Name == "probabilities");
+        var probs = probTensor.AsEnumerable<float>().ToArray();
+        // probs = [prob_class_0, prob_class_1] — we want class 1 (churn)
+        return Math.Clamp(probs.Length > 1 ? probs[1] : probs[0], 0.0, 1.0);
     }
 
     // ── Result building ────────────────────────────────────────────────────
@@ -464,14 +465,33 @@ internal sealed class RawChurnFeatures
 
 internal sealed class ChurnPreprocessingMetadata
 {
+    [System.Text.Json.Serialization.JsonPropertyName("numeric_features")]
     public List<string> NumericFeatures { get; set; } = [];
+    
+    [System.Text.Json.Serialization.JsonPropertyName("categorical_features")]
     public List<string> CategoricalFeatures { get; set; } = [];
+    
+    [System.Text.Json.Serialization.JsonPropertyName("imputer_medians")]
     public List<double> ImputerMedians { get; set; } = [];
+    
+    [System.Text.Json.Serialization.JsonPropertyName("scaler_means")]
     public List<double> ScalerMeans { get; set; } = [];
+    
+    [System.Text.Json.Serialization.JsonPropertyName("scaler_stds")]
     public List<double> ScalerStds { get; set; } = [];
+    
+    [System.Text.Json.Serialization.JsonPropertyName("categorical_categories")]
     public Dictionary<string, List<string>> CategoricalCategories { get; set; } = [];
+    
+    [System.Text.Json.Serialization.JsonPropertyName("medium_cut")]
     public double MediumCut { get; set; }
+    
+    [System.Text.Json.Serialization.JsonPropertyName("high_cut")]
     public double HighCut { get; set; }
+    
+    [System.Text.Json.Serialization.JsonPropertyName("n_transformed_features")]
     public int NTransformedFeatures { get; set; }
+    
+    [System.Text.Json.Serialization.JsonPropertyName("model_version")]
     public string ModelVersion { get; set; } = "";
 }
