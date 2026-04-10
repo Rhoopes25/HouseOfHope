@@ -1,3 +1,7 @@
+## FOR THE IS 455 TA'S GRADING OUR PROJECT
+
+Each pipeline integrated into our site (4) is in this directory and we have explained them all below. Additionall supplemental pipelines are in the additional_notebooks directory
+
 ## Training data (CSV only — not SQLite / not Azure SQL)
 
 - **Training and offline notebooks** should load Lighthouse data from **`backend/SeedData/*.csv`** (the same committed CSVs the API uses to seed local SQLite in development). Use `ml-pipelines/helpers/ml_data.py` → `resolve_seed_data_dir()` in Python scripts, or set **`ML_SEED_DATA_DIR`** to override the folder.
@@ -20,7 +24,7 @@ Below, **predictive** means supervised models used for forecasting, ranking, or 
 
 `Safehouse_Performance_Analysis.ipynb` helps leadership **benchmark safehouses** on a composite outcome index versus operational intensity and caseload stress, exports **`safehouse_performance_model.onnx`** for **`SafehousePerformancePredictionService`**, and frames coefficients as **peer comparison**, not causal proof that increasing documentation *causes* better outcomes. The **Reports & Analytics** page consumes safehouse performance rows from the API for staff-facing comparison.
 
-`SocialMedia_Growth_Analysis.ipynb` ties **social posts** to **engagement** and **referral-attributed giving**, uses **chronological** evaluation and leakage-aware feature sets, and feeds ONNX exports (**`social_media_engagement.onnx`**, **`social_media_donation.onnx`**) used by **`SocialMediaPredictionService`**. The analysis is **predictive** and associational (what correlates with referrals and engagement); causal claims require experiments. The admin **Post Optimizer** calls **`/ML/social-media/predict`** for what-if scoring.
+`SocialMedia_Growth_Analysis.ipynb` ties **social posts** to **engagement** and **referral-attributed giving**, uses **chronological** evaluation and leakage-aware feature sets, and feeds ONNX exports (**`social_media_engagement.onnx`**, **`social_media_donation.onnx`**) used by **`SocialMediaPredictionService`**. The analysis is **predictive** and associational (what correlates with referrals and engagement); causal claims require experiments. You can find this pipeline on the **Social Media** page in the Admin Dashboard, and the admin **Post Optimizer** calls **`/ML/social-media/predict`** for what-if scoring.
 
 ### Offline analysis, design, and supporting artifacts
 
