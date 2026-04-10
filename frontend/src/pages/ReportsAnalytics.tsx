@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { BarChart3, TrendingDown, Users, Sparkles, RefreshCw, ShieldAlert } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchChurnRisks, fetchSafehousePerformance, type SafehousePerformanceMlRow } from '@/lib/api-endpoints';
+import { fetchChurnRisks, fetchSafehousePerformance, fetchSupporters, type SafehousePerformanceMlRow } from '@/lib/api-endpoints';
+import type { Supporter } from '@/lib/types';
 
 interface ChurnResult {
   modelAvailable: boolean;
@@ -54,6 +55,12 @@ export default function ReportsAnalytics() {
     staleTime: 1000 * 60 * 5,
   });
 
+  const supportersQ = useQuery({
+    queryKey: ['supporters'],
+    queryFn: fetchSupporters,
+    staleTime: 1000 * 60 * 5,
+  });
+
   const results = Object.values(churnQ.data ?? {}) as ChurnResult[];
   const modelAvailable = results.length > 0 && results[0]?.modelAvailable;
 
@@ -70,6 +77,14 @@ export default function ReportsAnalytics() {
   const safehouseScoredAt = safehouseRows[0]?.scoredAtUtc
     ? new Date(safehouseRows[0].scoredAtUtc).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
+
+  const supporters = (supportersQ.data ?? []) as Supporter[];
+  const supporterNameById = new Map<number, string>(
+    supporters
+      .map((s) => [Number(s.id), s.displayName] as const)
+      .filter(([id]) => !Number.isNaN(id)),
+  );
+  const donorName = (supporterId: number) => supporterNameById.get(supporterId) ?? `Donor #${supporterId}`;
 
   return (
     <div className="space-y-6">
@@ -131,125 +146,109 @@ export default function ReportsAnalytics() {
           <p className="text-xs text-muted-foreground mt-4">
             Risk scores are predictions, not guarantees. Validate outreach effectiveness with A/B testing.
           </p>
-        </CardContent>
-      </Card>
 
-      {/* Priority outreach list */}
-      {!churnQ.isLoading && modelAvailable && highRisk.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="font-display text-lg flex items-center gap-2">
-                <TrendingDown className="h-5 w-5 text-primary" aria-hidden="true" />
-                Priority Outreach List
-              </CardTitle>
-              <span className="text-sm text-muted-foreground font-medium">
-                {highRisk.length} {highRisk.length === 1 ? 'donor' : 'donors'}
-              </span>
+          {!churnQ.isLoading && modelAvailable && highRisk.length > 0 && (
+            <div className="mt-5 p-4 rounded-lg border bg-card/60">
+              <div className="flex items-center justify-between mb-2">
+                <CardTitle className="font-display text-lg flex items-center gap-2">
+                  <TrendingDown className="h-5 w-5 text-primary" aria-hidden="true" />
+                  Priority Outreach List
+                </CardTitle>
+                <span className="text-sm text-muted-foreground font-medium">
+                  {highRisk.length} {highRisk.length === 1 ? 'donor' : 'donors'}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                These donors have the highest predicted churn risk. Reach out before they lapse.
+              </p>
+              <div className="space-y-2">
+                {highRisk.slice(0, 10).map((r, i) => (
+                  <div
+                    key={r.supporterId}
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-card border rounded-lg hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-xs text-muted-foreground w-6 shrink-0 font-medium">#{i + 1}</span>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">{donorName(r.supporterId)}</span>
+                          <RiskBadge tier={r.riskTier} />
+                        </div>
+                        <ScoreBar score={r.riskScore} tier={r.riskTier} />
+                        {r.topDrivers.length > 0 && (
+                          <p className="text-xs text-muted-foreground">{r.topDrivers.join(' · ')}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {highRisk.length > 10 && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    + {highRisk.length - 10} more high-risk donors — filter by "High" risk on the Donors page.
+                  </p>
+                )}
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              These donors have the highest predicted churn risk. Reach out before they lapse.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {highRisk.slice(0, 10).map((r, i) => (
-                <div
-                  key={r.supporterId}
-                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-card border rounded-lg hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="text-xs text-muted-foreground w-6 shrink-0 font-medium">#{i + 1}</span>
+          )}
+
+          {!churnQ.isLoading && modelAvailable && mediumRisk.length > 0 && (
+            <div className="mt-4 p-4 rounded-lg border bg-card/60">
+              <div className="flex items-center justify-between mb-2">
+                <CardTitle className="font-display text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" aria-hidden="true" />
+                  Medium Risk Donors
+                </CardTitle>
+                <span className="text-sm text-muted-foreground font-medium">
+                  {mediumRisk.length} {mediumRisk.length === 1 ? 'donor' : 'donors'}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Send a personalized impact update within the next two weeks.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {mediumRisk.slice(0, 8).map((r) => (
+                  <div key={r.supporterId} className="flex items-center gap-3 p-3 bg-card border rounded-lg">
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold">Donor #{r.supporterId}</span>
+                        <span className="text-sm font-semibold">{donorName(r.supporterId)}</span>
                         <RiskBadge tier={r.riskTier} />
                       </div>
                       <ScoreBar score={r.riskScore} tier={r.riskTier} />
-                      {r.topDrivers.length > 0 && (
-                        <p className="text-xs text-muted-foreground">{r.topDrivers.join(' · ')}</p>
-                      )}
                     </div>
                   </div>
-                
-                </div>
-              ))}
-              {highRisk.length > 10 && (
-                <p className="text-xs text-muted-foreground text-center pt-2">
-                  + {highRisk.length - 10} more high-risk donors — filter by "High" risk on the Donors page.
+                ))}
+              </div>
+              {mediumRisk.length > 8 && (
+                <p className="text-xs text-muted-foreground text-center pt-3">
+                  + {mediumRisk.length - 8} more — filter by "Medium" risk on the Donors page.
                 </p>
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
 
-      {/* Medium risk */}
-      {!churnQ.isLoading && modelAvailable && mediumRisk.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="font-display text-lg flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" aria-hidden="true" />
-                Medium Risk Donors
-              </CardTitle>
-              <span className="text-sm text-muted-foreground font-medium">
-                {mediumRisk.length} {mediumRisk.length === 1 ? 'donor' : 'donors'}
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Send a personalized impact update within the next two weeks.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {mediumRisk.slice(0, 8).map((r) => (
-                <div key={r.supporterId} className="flex items-center gap-3 p-3 bg-card border rounded-lg">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">Donor #{r.supporterId}</span>
-                      <RiskBadge tier={r.riskTier} />
-                    </div>
-                    <ScoreBar score={r.riskScore} tier={r.riskTier} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            {mediumRisk.length > 8 && (
-              <p className="text-xs text-muted-foreground text-center pt-3">
-                + {mediumRisk.length - 8} more — filter by "Medium" risk on the Donors page.
+          {modelAvailable && (
+            <div className="mt-4 p-4 rounded-lg border border-dashed bg-card/60 text-sm text-muted-foreground space-y-2">
+              <CardTitle className="font-display text-base text-foreground">Model Methodology</CardTitle>
+              <p>
+                <strong className="text-foreground">Algorithm:</strong> Logistic Regression with standardized RFM features.
+                Trained on a panel dataset of 90-day observation windows with a temporal train/test split — no future data leakage.
               </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Methodology */}
-      {modelAvailable && (
-        <Card className="border-dashed">
-          <CardHeader>
-            <CardTitle className="font-display text-base">Model Methodology</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>
-              <strong className="text-foreground">Algorithm:</strong> Logistic Regression with standardized RFM features.
-              Trained on a panel dataset of 90-day observation windows with a temporal train/test split — no future data leakage.
-            </p>
-            <p>
-              <strong className="text-foreground">Key predictors:</strong> Days since last gift, 90-day gift frequency,
-              frequency trend ratio (recent vs. prior quarter), recurring donation status, and acquisition channel.
-            </p>
-            <p>
-              <strong className="text-foreground">Important:</strong> These are correlational findings, not causal proofs.
-              A high risk score identifies <em>who</em> to contact — not <em>why</em> they are lapsing.
-              Validate outreach effectiveness with A/B testing before reallocating significant resources.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+              <p>
+                <strong className="text-foreground">Key predictors:</strong> Days since last gift, 90-day gift frequency,
+                frequency trend ratio (recent vs. prior quarter), recurring donation status, and acquisition channel.
+              </p>
+              <p>
+                <strong className="text-foreground">Important:</strong> These are correlational findings, not causal proofs.
+                A high risk score identifies <em>who</em> to contact — not <em>why</em> they are lapsing.
+                Validate outreach effectiveness with A/B testing before reallocating significant resources.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Safehouse performance benchmark */}
-      <Card className="border-2 border-primary/30 bg-primary/5">
+      <Card className="border-2 border-primary bg-primary/5">
         <CardHeader>
           <CardTitle className="font-display text-lg flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
@@ -310,6 +309,24 @@ export default function ReportsAnalytics() {
                     )}
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-4 p-4 rounded-lg border border-dashed bg-card/60 text-sm text-muted-foreground space-y-2">
+                <CardTitle className="font-display text-base text-foreground">Model Methodology</CardTitle>
+                <p>
+                  <strong className="text-foreground">Algorithm:</strong> Ridge regression benchmark trained from
+                  `SeedData` CSV patterns and deployed as ONNX for read-only scoring.
+                </p>
+                <p>
+                  <strong className="text-foreground">Feature families:</strong> counseling cadence, visit cadence,
+                  intervention plan completion, caseload complexity, high/critical risk mix, resident count, education progress,
+                  and health score.
+                </p>
+                <p>
+                  <strong className="text-foreground">Interpretation:</strong> the model estimates expected outcome index for each
+                  safehouse’s operational profile. <em>Gap = actual − expected</em> is for benchmarking, not causal proof.
+                  Use this to prioritize operational coaching and then validate interventions over time.
+                </p>
               </div>
             </div>
           )}
