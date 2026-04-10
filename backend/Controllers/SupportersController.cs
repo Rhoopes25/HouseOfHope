@@ -15,11 +15,12 @@ public class SupportersController : ControllerBase
     private const string DeletedDonorName = "Deleted Donor";
     private readonly LighthouseDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
-
-    public SupportersController(LighthouseDbContext db, UserManager<ApplicationUser> userManager)
+    private readonly DonorChurnPredictionService _churnService;
+    public SupportersController(LighthouseDbContext db, UserManager<ApplicationUser> userManager, DonorChurnPredictionService churnService)
     {
         _db = db;
         _userManager = userManager;
+        _churnService = churnService;
     }
 
     [HttpGet]
@@ -74,14 +75,20 @@ public class SupportersController : ControllerBase
                 adminEmails.Add(user.Email.Trim().ToLower());
             }
         }
-        return list.Select(s =>
-        {
-            var emailKey = (s.Email ?? "").Trim().ToLower();
-            return ToDto(
-                s,
-                hasLinkedLogin: loginEmails.Contains(emailKey),
-                hasAdminRole: adminEmails.Contains(emailKey));
-        }).ToList();
+     var churnScores = await _churnService.PredictForAllSupportersAsync(ct);
+
+    return list.Select(s =>
+    {
+        var emailKey = (s.Email ?? "").Trim().ToLower();
+        var churnTier = churnScores.TryGetValue(s.SupporterId, out var score)
+            ? score.RiskTier
+            : "low";
+        return ToDto(
+            s,
+            hasLinkedLogin: loginEmails.Contains(emailKey),
+            hasAdminRole: adminEmails.Contains(emailKey),
+            churnRisk: churnTier);
+    }).ToList();
     }
 
     [HttpPost]
@@ -176,7 +183,7 @@ public class SupportersController : ControllerBase
         return NoContent();
     }
 
-    private static SupporterDto ToDto(Supporter s, bool hasLinkedLogin, bool hasAdminRole) => new()
+    private static SupporterDto ToDto(Supporter s, bool hasLinkedLogin, bool hasAdminRole, string churnRisk = "low") => new()
     {
         Id = s.SupporterId.ToString(),
         DisplayName = s.DisplayName,
@@ -188,7 +195,8 @@ public class SupportersController : ControllerBase
         Country = s.Country ?? s.Region ?? "",
         AcquisitionChannel = s.AcquisitionChannel ?? "",
         FirstDonationDate = s.FirstDonationDate ?? "",
-        ChurnRisk = "medium"
+        ChurnRisk = churnRisk
+
     };
 
     private static string NormalizeSupporterStatus(string? raw) =>
