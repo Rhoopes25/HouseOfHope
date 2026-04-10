@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { StatCard } from '@/components/StatCard';
@@ -20,6 +20,14 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { displaySafehouseName } from '@/lib/safehouseDisplay';
+import {
+  CURRENCY_SYMBOLS,
+  convertFromPhp,
+  formatCurrency,
+  normalizeToPhp,
+  type SupportedCurrency,
+  toSupportedCurrency,
+} from '@/lib/currency';
 
 /** Match backend `DateTime.UtcNow.ToString("yyyy-MM")` for monthly donation totals */
 function currentUtcMonthPrefix(): string {
@@ -87,18 +95,19 @@ function deriveFromResidents(residents: Resident[] | undefined) {
 
 function deriveDonations(donations: Donation[] | undefined, monthPrefix: string) {
   const list = donations ?? [];
-  const monthlyTotal = list
+  const monthlyTotalPhp = list
     .filter((d) => d.date && d.date.startsWith(monthPrefix))
-    .reduce((sum, d) => sum + (d.amount ?? 0), 0);
+    .reduce((sum, d) => sum + normalizeToPhp(d.amount ?? 0, d.currency), 0);
   const recent = [...list]
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .slice(0, 8);
-  return { monthlyTotal, recent };
+  return { monthlyTotalPhp, recent };
 }
 
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const monthPrefix = useMemo(() => currentUtcMonthPrefix(), []);
+  const [displayCurrency, setDisplayCurrency] = useState<SupportedCurrency>('PHP');
 
   const residentsQ = useQuery({
     queryKey: ['residents'],
@@ -119,9 +128,13 @@ export default function AdminDashboard() {
   const { active: activeResidents, safehouseCount, highRisk: highRiskResidents, bySafehouse } =
     useMemo(() => deriveFromResidents(residentsQ.data), [residentsQ.data]);
 
-  const { monthlyTotal: monthlyDonationsTotal, recent: recentDonations } = useMemo(
+  const { monthlyTotalPhp, recent: recentDonations } = useMemo(
     () => deriveDonations(donationsQ.data, monthPrefix),
     [donationsQ.data, monthPrefix],
+  );
+  const monthlyDonationsDisplay = useMemo(
+    () => convertFromPhp(monthlyTotalPhp, displayCurrency),
+    [monthlyTotalPhp, displayCurrency],
   );
 
   const upcomingConferences = conferencesQ.data ?? [];
@@ -244,14 +257,31 @@ export default function AdminDashboard() {
             description="Could not load donations"
           />
         ) : (
-          <StatCard
-            className="col-span-2"
-            title="Donations (this month)"
-            value={`₱${Math.round(monthlyDonationsTotal).toLocaleString()}`}
-            icon={<DollarSign className="h-6 w-6" />}
-            description="Monetary total (UTC month)"
-            valueClassName="text-2xl sm:text-3xl lg:text-4xl break-words"
-          />
+          <div className="col-span-2 relative">
+            <StatCard
+              className="pb-10"
+              title="Donations (this month)"
+              value={formatCurrency(monthlyDonationsDisplay, displayCurrency)}
+              icon={<DollarSign className="h-6 w-6" />}
+              description={`Monetary total ${displayCurrency}`}
+              valueClassName="text-2xl sm:text-3xl lg:text-4xl break-words"
+            />
+            <div className="absolute bottom-3 right-3 flex items-center gap-1">
+              {(['PHP', 'USD', 'EUR'] as SupportedCurrency[]).map((currency) => (
+                <Button
+                  key={currency}
+                  type="button"
+                  variant={displayCurrency === currency ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDisplayCurrency(currency)}
+                  aria-pressed={displayCurrency === currency}
+                  className="h-7 px-2 text-xs"
+                >
+                  {CURRENCY_SYMBOLS[currency]} {currency}
+                </Button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
@@ -282,7 +312,7 @@ export default function AdminDashboard() {
                       </div>
                       <span className="text-sm font-semibold text-primary shrink-0 tabular-nums">
                         {d.amount != null
-                          ? `${d.currency === 'USD' ? '$' : '₱'}${d.amount.toLocaleString()}`
+                          ? `${CURRENCY_SYMBOLS[toSupportedCurrency(d.currency)]}${d.amount.toLocaleString()}`
                           : d.type}
                       </span>
                     </div>
