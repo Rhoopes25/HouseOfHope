@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchChurnRisks, fetchSafehousePerformance, fetchSupporters, type SafehousePerformanceMlRow } from '@/lib/api-endpoints';
 import type { Supporter } from '@/lib/types';
+import { displaySafehouseName } from '@/lib/safehouseDisplay';
 
 interface ChurnResult {
   modelAvailable: boolean;
@@ -40,6 +41,11 @@ function ScoreBar({ score, tier }: { score: number; tier: string }) {
       <span className="text-xs tabular-nums text-muted-foreground w-7 text-right">{pct}%</span>
     </div>
   );
+}
+
+function removeOutdatedLighthouseTerm(value: string | undefined | null): string {
+  if (!value) return '';
+  return value.replace(/\bLighthouse\b/gi, 'Safehouse');
 }
 
 export default function ReportsAnalytics() {
@@ -286,9 +292,9 @@ export default function ReportsAnalytics() {
                   <div key={r.safehouseId} className="p-3 bg-card border rounded-lg">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">{r.safehouseName}</p>
+                        <p className="text-sm font-semibold truncate">{displaySafehouseName(r.safehouseName || '')}</p>
                         <p className="text-xs text-muted-foreground">
-                          {r.tierLabel} · Gap: <span className="font-medium tabular-nums">{r.benchmarkGap.toFixed(2)}</span>
+                          {removeOutdatedLighthouseTerm(r.tierLabel)} · Gap: <span className="font-medium tabular-nums">{r.benchmarkGap.toFixed(2)}</span>
                           {' '}· Actual: <span className="tabular-nums">{r.outcomeIndexActual.toFixed(2)}</span>
                           {' '}· Expected: <span className="tabular-nums">{r.outcomeIndexExpected.toFixed(2)}</span>
                         </p>
@@ -298,12 +304,14 @@ export default function ReportsAnalytics() {
                       </div>
                     </div>
                     {r.topDrivers?.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-2">{r.topDrivers.join(' · ')}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {r.topDrivers.map((d) => removeOutdatedLighthouseTerm(d)).join(' · ')}
+                      </p>
                     )}
                     {r.recommendedActions?.length > 0 && (
                       <ul className="mt-2 text-xs text-muted-foreground list-disc pl-5 space-y-1">
                         {r.recommendedActions.slice(0, 3).map((a) => (
-                          <li key={a}>{a}</li>
+                          <li key={a}>{removeOutdatedLighthouseTerm(a)}</li>
                         ))}
                       </ul>
                     )}

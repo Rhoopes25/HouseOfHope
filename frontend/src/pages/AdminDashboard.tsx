@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { displaySafehouseName } from '@/lib/safehouseDisplay';
 
 /** Match backend `DateTime.UtcNow.ToString("yyyy-MM")` for monthly donation totals */
 function currentUtcMonthPrefix(): string {
@@ -50,7 +51,8 @@ function activeResidentsBySafehouse(residents: Resident[] | undefined) {
   const list = (residents ?? []).filter((r) => r.caseStatus === 'active');
   const map = new Map<string, number>();
   for (const r of list) {
-    const name = (r.safehouse || 'Unknown').trim() || 'Unknown';
+    const rawName = (r.safehouse || 'Unknown').trim() || 'Unknown';
+    const name = displaySafehouseName(rawName) || 'Unknown';
     map.set(name, (map.get(name) ?? 0) + 1);
   }
   return [...map.entries()]
