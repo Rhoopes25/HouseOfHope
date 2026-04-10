@@ -6,7 +6,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-import pipeline_utils as pu  # noqa: E402
+from helpers import pipeline_utils as pu  # noqa: E402
 
 
 def main() -> None:

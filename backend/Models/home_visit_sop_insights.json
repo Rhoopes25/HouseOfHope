@@ -1,0 +1,148 @@
+{
+  "version": "1",
+  "generatedAtUtc": "2026-04-10T06:42:44Z",
+  "problemSummary": "Explanatory decision tree (max_depth=3, gini) on home visit outcomes to surface drivers of favorable vs non-favorable visits for social-worker SOP planning \u2014 interpretability over raw predictive accuracy.",
+  "modelParams": {
+    "maxDepth": 3,
+    "criterion": "gini",
+    "randomState": 42
+  },
+  "metrics": {
+    "accuracy": 0.5634328358208955,
+    "f1PositiveClass": 0.4978540772532189,
+    "confusionMatrix": [
+      [
+        93,
+        65
+      ],
+      [
+        52,
+        58
+      ]
+    ],
+    "confusionLabels": {
+      "rows": [
+        "actual_unfavorable",
+        "actual_favorable"
+      ],
+      "cols": [
+        "pred_unfavorable",
+        "pred_favorable"
+      ]
+    },
+    "testSupport": {
+      "n": 268,
+      "favorableRate": 0.41044776119402987
+    }
+  },
+  "featureImportances": [
+    {
+      "feature": "remainder__safety_concerns_noted",
+      "importance": 0.871698847501521
+    },
+    {
+      "feature": "cat__location_visited_Barangay Office",
+      "importance": 0.06445267171550013
+    },
+    {
+      "feature": "cat__location_visited_Family Home",
+      "importance": 0.034288664716655315
+    },
+    {
+      "feature": "cat__location_visited_School",
+      "importance": 0.01527804878065695
+    },
+    {
+      "feature": "remainder__has_parent",
+      "importance": 0.01049432197427478
+    },
+    {
+      "feature": "cat__location_visited_Proposed Foster Home",
+      "importance": 0.003787445311391851
+    }
+  ],
+  "businessRules": [
+    "|--- remainder__safety_concerns_noted <= 0.50",
+    "|   |--- cat__location_visited_Barangay Office <= 0.50",
+    "|   |   |--- cat__location_visited_Family Home <= 0.50",
+    "|   |   |   |--- class: 1",
+    "|   |   |--- cat__location_visited_Family Home >  0.50",
+    "|   |   |   |--- class: 0",
+    "|   |--- cat__location_visited_Barangay Office >  0.50",
+    "|   |   |--- remainder__has_parent <= 0.50",
+    "|   |   |   |--- class: 0",
+    "|   |   |--- remainder__has_parent >  0.50",
+    "|   |   |   |--- class: 0",
+    "|--- remainder__safety_concerns_noted >  0.50",
+    "|   |--- cat__location_visited_School <= 0.50",
+    "|   |   |--- cat__location_visited_Proposed Foster Home <= 0.50",
+    "|   |   |   |--- class: 0",
+    "|   |   |--- cat__location_visited_Proposed Foster Home >  0.50",
+    "|   |   |   |--- class: 0",
+    "|   |--- cat__location_visited_School >  0.50",
+    "|   |   |--- remainder__has_parent <= 0.50",
+    "|   |   |   |--- class: 0",
+    "|   |   |--- remainder__has_parent >  0.50",
+    "|   |   |   |--- class: 0"
+  ],
+  "treeText": "|--- remainder__safety_concerns_noted <= 0.50\n|   |--- cat__location_visited_Barangay Office <= 0.50\n|   |   |--- cat__location_visited_Family Home <= 0.50\n|   |   |   |--- class: 1\n|   |   |--- cat__location_visited_Family Home >  0.50\n|   |   |   |--- class: 0\n|   |--- cat__location_visited_Barangay Office >  0.50\n|   |   |--- remainder__has_parent <= 0.50\n|   |   |   |--- class: 0\n|   |   |--- remainder__has_parent >  0.50\n|   |   |   |--- class: 0\n|--- remainder__safety_concerns_noted >  0.50\n|   |--- cat__location_visited_School <= 0.50\n|   |   |--- cat__location_visited_Proposed Foster Home <= 0.50\n|   |   |   |--- class: 0\n|   |   |--- cat__location_visited_Proposed Foster Home >  0.50\n|   |   |   |--- class: 0\n|   |--- cat__location_visited_School >  0.50\n|   |   |--- remainder__has_parent <= 0.50\n|   |   |   |--- class: 0\n|   |   |--- remainder__has_parent >  0.50\n|   |   |   |--- class: 0\n",
+  "sopChecklist": [
+    {
+      "step": 0,
+      "title": "Safety first",
+      "detail": "If safety concerns are documented for this address or household, require two staff or relocate to a neutral site per agency SOP before proceeding.",
+      "feature": "",
+      "importance": 0.0
+    },
+    {
+      "step": 0,
+      "title": "Confirm guardian attendance",
+      "detail": "When no parent/guardian is indicated in the visit plan, delay or reschedule until guardian attendance is confirmed unless emergency protocols apply.",
+      "feature": "",
+      "importance": 0.0
+    },
+    {
+      "step": 1,
+      "title": "Safety screening",
+      "detail": "Before scheduling, confirm whether prior or contextual safety concerns are documented. The tree splits on safety flags early when they appear in historical patterns.",
+      "feature": "remainder__safety_concerns_noted",
+      "importance": 0.871698847501521
+    },
+    {
+      "step": 2,
+      "title": "Location strategy",
+      "detail": "Location category `location_visited_Barangay Office` appears in the tree \u2014 align site choice with assessment type (neutral vs family home vs barangay office) per agency policy.",
+      "feature": "cat__location_visited_Barangay Office",
+      "importance": 0.06445267171550013
+    },
+    {
+      "step": 3,
+      "title": "Location strategy",
+      "detail": "Location category `location_visited_Family Home` appears in the tree \u2014 align site choice with assessment type (neutral vs family home vs barangay office) per agency policy.",
+      "feature": "cat__location_visited_Family Home",
+      "importance": 0.034288664716655315
+    },
+    {
+      "step": 4,
+      "title": "Location strategy",
+      "detail": "Location category `location_visited_School` appears in the tree \u2014 align site choice with assessment type (neutral vs family home vs barangay office) per agency policy.",
+      "feature": "cat__location_visited_School",
+      "importance": 0.01527804878065695
+    },
+    {
+      "step": 5,
+      "title": "Parental / guardian presence",
+      "detail": "Confirm a parent or legal guardian is expected or present when the visit plan indicates a parent role \u2014 structured guardian engagement aligns with more favorable visit patterns in this data.",
+      "feature": "remainder__has_parent",
+      "importance": 0.01049432197427478
+    },
+    {
+      "step": 6,
+      "title": "Location strategy",
+      "detail": "Location category `location_visited_Proposed Foster Home` appears in the tree \u2014 align site choice with assessment type (neutral vs family home vs barangay office) per agency policy.",
+      "feature": "cat__location_visited_Proposed Foster Home",
+      "importance": 0.003787445311391851
+    }
+  ],
+  "notes": "Explanatory model for rubric discussion only. Keep in sync with Home_Visitation_Explanatory_Decision_Tree.ipynb when changing logic."
+}
