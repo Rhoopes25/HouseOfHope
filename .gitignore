@@ -2,6 +2,10 @@
 ## Build outputs
 [Bb]in/
 [Oo]bj/
+# Alternate output dirs from `dotnet build -o path` (e.g. _bc3, _bc4 — not the same as bin/)
+**/_bc[0-9]*/
+backend/bin_temp/
+backend/_buildcheck/
 [Ll]og/
 [Ll]ogs/
 [Dd]ebug/

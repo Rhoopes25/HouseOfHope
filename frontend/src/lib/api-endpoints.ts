@@ -116,13 +116,34 @@ export const fetchAllInterventionPlansGlobal = (residentId?: string) =>
       : '/Residents/intervention-plans',
   );
 
-export const fetchCaseConferences = () =>
-  apiFetch<UpcomingConference[]>('/Residents/case-conferences');
+/** @param futureOnly When true, only conferences on or after today (UTC) — for admin dashboard. */
+export const fetchCaseConferences = (options?: { futureOnly?: boolean }) => {
+  const q = options?.futureOnly ? '?futureOnly=true' : '';
+  return apiFetch<UpcomingConference[]>(`/Residents/case-conferences${q}`);
+};
 
 export const fetchSupporters = () => apiFetch<Supporter[]>('/Supporters');
 
 export const fetchChurnRisks = () =>
   apiFetch<Record<string, { riskScore: number; riskTier: string; topDrivers: string[]; recommendedActions: string[] }>>('/ML/donor-churn/all');
+
+export interface SafehousePerformanceInsight {
+  modelAvailable: boolean;
+  modelVersion: string;
+  scoredAtUtc: string;
+  safehouseId: number;
+  name: string;
+  residentCount: number;
+  outcomeIndex: number;
+  expectedOutcomeIndex: number;
+  performanceGap: number;
+  tier: 'strong' | 'on_track' | 'needs_attention' | 'unknown';
+  topDrivers: string[];
+  recommendedActions: string[];
+}
+
+export const fetchSafehousePerformance = () =>
+  apiFetch<SafehousePerformanceInsight[]>('/ML/safehouse-performance');
 
 export const createSupporter = (payload: {
   displayName: string;
@@ -201,6 +222,7 @@ export type ResidentUpsertPayload = {
   caseStatus: string;
   caseCategory: string;
   riskLevel: string;
+  initialRiskLevel?: string;
   assignedSocialWorker: string;
   reintegrationStatus?: string;
   reintegrationType?: string;

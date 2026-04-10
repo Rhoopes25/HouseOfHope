@@ -18,6 +18,7 @@ public class LighthouseDbContext : DbContext
     public DbSet<HealthWellbeingRecord> HealthWellbeingRecords => Set<HealthWellbeingRecord>();
     public DbSet<PublicImpactSnapshot> PublicImpactSnapshots => Set<PublicImpactSnapshot>();
     public DbSet<IncidentReport> IncidentReports => Set<IncidentReport>();
+    public DbSet<SafehouseMonthlyMetric> SafehouseMonthlyMetrics => Set<SafehouseMonthlyMetric>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,5 +43,10 @@ public class LighthouseDbContext : DbContext
         modelBuilder.Entity<HealthWellbeingRecord>(e => e.ToTable("health_wellbeing_records"));
         modelBuilder.Entity<PublicImpactSnapshot>(e => e.ToTable("public_impact_snapshots"));
         modelBuilder.Entity<IncidentReport>(e => e.ToTable("incident_reports"));
+        modelBuilder.Entity<SafehouseMonthlyMetric>(e =>
+        {
+            e.ToTable("safehouse_monthly_metrics");
+            e.HasOne(m => m.Safehouse).WithMany().HasForeignKey(m => m.SafehouseId);
+        });
     }
 }

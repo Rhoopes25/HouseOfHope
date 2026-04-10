@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, TrendingDown, Users, Sparkles, RefreshCw, ChevronRight, ShieldAlert } from 'lucide-react';
+import { BarChart3, TrendingDown, Users, Sparkles, RefreshCw, ShieldAlert, Home } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchChurnRisks } from '@/lib/api-endpoints';
+import { fetchChurnRisks, fetchSafehousePerformance } from '@/lib/api-endpoints';
 
 interface ChurnResult {
   modelAvailable: boolean;
@@ -41,10 +41,36 @@ function ScoreBar({ score, tier }: { score: number; tier: string }) {
   );
 }
 
+function SafehouseTierBadge({ tier }: { tier: string }) {
+  const styles: Record<string, string> = {
+    strong: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+    on_track: 'bg-sky-50 text-sky-800 border border-sky-200',
+    needs_attention: 'bg-amber-50 text-amber-900 border border-amber-300',
+    unknown: 'bg-gray-100 text-gray-500 border border-gray-200',
+  };
+  const label: Record<string, string> = {
+    strong: 'Strong',
+    on_track: 'On track',
+    needs_attention: 'Needs attention',
+    unknown: 'Unknown',
+  };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${styles[tier] ?? styles.unknown}`}>
+      {label[tier] ?? tier}
+    </span>
+  );
+}
+
 export default function ReportsAnalytics() {
   const churnQ = useQuery({
     queryKey: ['churnRisks'],
     queryFn: fetchChurnRisks,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const shQ = useQuery({
+    queryKey: ['safehousePerformance'],
+    queryFn: fetchSafehousePerformance,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -59,6 +85,14 @@ export default function ReportsAnalytics() {
     ? new Date(results[0].scoredAtUtc).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
 
+  const shRows = shQ.data ?? [];
+  const shModelOk = shRows.length > 0 && shRows[0]?.modelAvailable;
+  const shScoredAt = shRows[0]?.scoredAtUtc
+    ? new Date(shRows[0].scoredAtUtc).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+  const strongSh = shRows.filter((r) => r.tier === 'strong');
+  const attentionSh = shRows.filter((r) => r.tier === 'needs_attention');
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -67,13 +101,124 @@ export default function ReportsAnalytics() {
           <BarChart3 className="h-8 w-8 text-primary shrink-0" aria-hidden="true" />
           Reports &amp; Analytics
         </h1>
-        {scoredAt && (
+        {(scoredAt || shScoredAt) && (
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <RefreshCw className="h-3 w-3" />
-            Model scored {scoredAt}
+            {shScoredAt && <span>Safehouse model {shScoredAt}</span>}
+            {scoredAt && shScoredAt && <span aria-hidden="true"> · </span>}
+            {scoredAt && <span>Churn model {scoredAt}</span>}
           </p>
         )}
       </div>
+
+      {/* Safehouse performance — Ridge benchmark vs composite outcomes */}
+      <Card className="border-2 border-primary/30 bg-primary/[0.03]">
+        <CardHeader>
+          <CardTitle className="font-display text-lg flex items-center gap-2">
+            <Home className="h-5 w-5 text-primary" aria-hidden="true" />
+            Safehouse Outcomes &amp; Benchmarks
+          </CardTitle>
+          <p className="text-sm text-foreground/70">
+            Ridge regression (v2) uses resident-level practice metrics plus rolling{' '}
+            <code className="text-xs bg-background px-1 rounded">safehouse_monthly_metrics</code> aggregates (education,
+            health, incident intensity). Train MAE: <strong>1.73</strong> · R²: <strong>0.89</strong>
+          </p>
+        </CardHeader>
+        <CardContent>
+          {shQ.isLoading ? (
+            <div className="grid grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-24 rounded-lg" />
+              ))}
+            </div>
+          ) : !shModelOk ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg border border-dashed">
+              <ShieldAlert className="h-4 w-4 text-muted-foreground shrink-0" />
+              Model unavailable — deploy{' '}
+              <code className="text-xs bg-background px-1 rounded mx-1">safehouse_performance_model.onnx</code> and{' '}
+              <code className="text-xs bg-background px-1 rounded mx-1">safehouse_performance_preprocessing.json</code> to the backend Models folder.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div className="bg-card border rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-emerald-600">{strongSh.length}</p>
+                  <p className="text-sm font-medium text-foreground mt-1">Strong performers</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">High outcomes vs benchmark</p>
+                </div>
+                <div className="bg-card border rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-sky-600">
+                    {shRows.filter((r) => r.tier === 'on_track').length}
+                  </p>
+                  <p className="text-sm font-medium text-foreground mt-1">On track</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Within expected range</p>
+                </div>
+                <div className="bg-card border rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-amber-600">{attentionSh.length}</p>
+                  <p className="text-sm font-medium text-foreground mt-1">Need attention</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Below benchmark or low index</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">All safehouses (outcome index 0–100)</p>
+                {shRows.map((r) => (
+                  <div
+                    key={r.safehouseId}
+                    className="flex flex-col lg:flex-row lg:items-start gap-3 p-3 bg-card border rounded-lg"
+                  >
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-foreground">{r.name}</span>
+                        <SafehouseTierBadge tier={r.tier} />
+                        <span className="text-xs text-muted-foreground">
+                          {r.residentCount} {r.residentCount === 1 ? 'resident' : 'residents'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Outcome index</span>
+                          <p className="font-semibold tabular-nums">{r.outcomeIndex.toFixed(1)}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Benchmark</span>
+                          <p className="font-semibold tabular-nums">{r.expectedOutcomeIndex.toFixed(1)}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Gap (actual − expected)</span>
+                          <p
+                            className={`font-semibold tabular-nums ${r.performanceGap >= 0 ? 'text-emerald-700' : 'text-amber-800'}`}
+                          >
+                            {r.performanceGap >= 0 ? '+' : ''}
+                            {r.performanceGap.toFixed(1)}
+                          </p>
+                        </div>
+                      </div>
+                      {r.topDrivers.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground/80">Signals: </span>
+                          {r.topDrivers.join(' · ')}
+                        </p>
+                      )}
+                      {r.recommendedActions.length > 0 && (
+                        <ul className="text-xs text-foreground/90 list-disc list-inside space-y-0.5">
+                          {r.recommendedActions.map((a, i) => (
+                            <li key={i}>{a}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <p className="text-xs text-muted-foreground mt-4">
+            Outcome index blends reintegration completion, education and health (resident records), stable low-risk
+            profile, and risk improvement since intake when initial risk is recorded. The benchmark adds monthly
+            operational rollups. Correlation is not causation: use gaps to prioritize supervision, not punishment.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Model summary card — matches Social Media "Best Post Strategy" style */}
       <Card className="border-2 border-primary bg-primary/5">

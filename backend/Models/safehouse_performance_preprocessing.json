@@ -1,0 +1,76 @@
+{
+  "model_version": "safehouse-ridge-benchmark-v2",
+  "feature_names": [
+    "process_per_resident",
+    "visits_per_resident",
+    "intervention_achieve_rate",
+    "caseload_complexity",
+    "pct_high_critical_risk",
+    "n_residents",
+    "monthly_avg_education_progress",
+    "monthly_avg_health_score",
+    "monthly_incident_rate"
+  ],
+  "imputer_medians": [
+    43.8,
+    21.875,
+    0.16666666666666666,
+    1.6666666666666667,
+    10.0,
+    7.0,
+    78.07172413793103,
+    3.2079999999999997,
+    0.03428571428571428
+  ],
+  "scaler_means": [
+    47.765608465608466,
+    22.329761904761906,
+    0.14770723104056438,
+    1.547089947089947,
+    12.883597883597883,
+    6.666666666666667,
+    77.67725746302476,
+    3.1518566474997693,
+    0.03662433862433863
+  ],
+  "scaler_stds": [
+    10.017698520602117,
+    3.884827892597308,
+    0.0742255107766165,
+    0.4316147497908979,
+    15.680758062013485,
+    2.160246899469287,
+    6.931242469352342,
+    0.20752079939868892,
+    0.017359444465227494
+  ],
+  "ridge_intercept": 47.24010284945238,
+  "ridge_coef": [
+    1.8548704576065544,
+    0.4788627741519755,
+    -0.43914211344814,
+    -2.2587280789740136,
+    -1.2393658565569567,
+    2.605027291221049,
+    1.5088277004782311,
+    1.1290888572999478,
+    -0.5190164088209424
+  ],
+  "train_mae": 1.7292622872242707,
+  "train_r2": 0.8891855455654467,
+  "cv_mae_mean": 7.579766904128716,
+  "cv_mae_std": 3.939742811104191,
+  "tier_strong_cut": 51.288593535353534,
+  "tier_attention_cut": 44.97303063736263,
+  "network_means": {
+    "process_per_resident": 47.765608465608466,
+    "visits_per_resident": 22.329761904761906,
+    "intervention_achieve_rate": 0.14770723104056438,
+    "caseload_complexity": 1.547089947089947,
+    "pct_high_critical_risk": 12.883597883597883,
+    "n_residents": 6.666666666666667,
+    "monthly_avg_education_progress": 77.67725746302476,
+    "monthly_avg_health_score": 3.1518566474997693,
+    "monthly_incident_rate": 0.03662433862433863
+  }
+}

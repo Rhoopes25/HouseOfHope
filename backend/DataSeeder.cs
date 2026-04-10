@@ -33,6 +33,12 @@ public static class DataSeeder
             SeedWithIdentityInsert(context, "safehouses", safehouses);
         }
 
+        if (!context.SafehouseMonthlyMetrics.Any() && File.Exists(CsvPath(contentRootPath, "safehouse_monthly_metrics.csv")))
+        {
+            var metrics = ReadCsv<SafehouseMonthlyMetric>(CsvPath(contentRootPath, "safehouse_monthly_metrics.csv"));
+            SeedWithIdentityInsert(context, "safehouse_monthly_metrics", metrics);
+        }
+
         if (!context.Supporters.Any() && File.Exists(CsvPath(contentRootPath, "supporters.csv")))
         {
             var supporters = ReadCsv<Supporter>(CsvPath(contentRootPath, "supporters.csv"));

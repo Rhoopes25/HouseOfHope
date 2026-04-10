@@ -24,6 +24,20 @@ public static class HouseOfHopeMapper
         _ => "medium"
     };
 
+    /// <summary>Maps API / form values to DB casing (Low, Medium, High, Critical).</summary>
+    public static string? NormalizeRiskLevel(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        return s.Trim().ToLowerInvariant() switch
+        {
+            "low" => "Low",
+            "medium" => "Medium",
+            "high" => "High",
+            "critical" => "Critical",
+            _ => char.ToUpperInvariant(s.Trim()[0]) + (s.Trim().Length > 1 ? s.Trim()[1..] : "")
+        };
+    }
+
     public static List<string> BuildSubcategories(Resident r)
     {
         var list = new List<string>();
@@ -135,6 +149,7 @@ public static class HouseOfHopeMapper
             CaseCategory = r.CaseCategory ?? "",
             CaseSubcategories = BuildSubcategories(r),
             RiskLevel = ToRisk(r.CurrentRiskLevel),
+            InitialRiskLevel = string.IsNullOrWhiteSpace(r.InitialRiskLevel) ? "" : ToRisk(r.InitialRiskLevel),
             AssignedSocialWorker = r.AssignedSocialWorker ?? "",
             ReintegrationStatus = r.ReintegrationStatus ?? "",
             ReintegrationType = r.ReintegrationType ?? "",

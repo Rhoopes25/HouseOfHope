@@ -25,8 +25,8 @@ const adminNav = [
   { title: 'Process Recording', url: '/admin/process-recording', icon: ScrollText },
   { title: 'Visitations & Conferences', url: '/admin/field-ops', icon: MapPinned },
   { title: 'Donors & Contributions', url: '/admin/donors', icon: HandCoins },
-  { title: 'Reports (ML)', url: '/admin/reports', icon: BarChart3 },
-  { title: 'Social (ML)', url: '/admin/social-media', icon: Share2 },
+  { title: 'Reports & Analytics', url: '/admin/reports', icon: BarChart3 },
+  { title: 'Social Media Analytics', url: '/admin/social-media', icon: Share2 },
 ];
 
 function AdminSidebarContent() {

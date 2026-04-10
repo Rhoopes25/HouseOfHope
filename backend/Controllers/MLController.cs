@@ -11,15 +11,18 @@ public class MLController : ControllerBase
     private readonly SocialMediaPredictionService _predictionService;
     private readonly CaseManagementPredictionService _casePredictionService;
     private readonly DonorChurnPredictionService _churnService;
+    private readonly SafehousePerformanceService _safehousePerformanceService;
 
     public MLController(
         SocialMediaPredictionService predictionService,
         CaseManagementPredictionService casePredictionService,
-        DonorChurnPredictionService churnService)
+        DonorChurnPredictionService churnService,
+        SafehousePerformanceService safehousePerformanceService)
     {
         _predictionService = predictionService;
         _casePredictionService = casePredictionService;
         _churnService = churnService;
+        _safehousePerformanceService = safehousePerformanceService;
     }
 
     // ── Social Media ──────────────────────────────────────────────────────
@@ -93,6 +96,27 @@ public class MLController : ControllerBase
         try
         {
             var results = await _churnService.PredictForAllSupportersAsync(ct);
+            return Ok(results);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    // ── Safehouse performance ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Composite outcome index + Ridge benchmark gap per safehouse (see ml-pipelines notebook).
+    /// </summary>
+    [HttpGet("safehouse-performance")]
+    [Authorize(Policy = "ManageData")]
+    public async Task<ActionResult<List<SafehousePerformanceInsight>>> SafehousePerformance(
+        CancellationToken ct)
+    {
+        try
+        {
+            var results = await _safehousePerformanceService.ScoreAllSafehousesAsync(ct);
             return Ok(results);
         }
         catch (Exception ex)

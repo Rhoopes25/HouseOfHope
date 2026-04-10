@@ -1,3 +1,4 @@
+using System.Globalization;
 using HouseOfHope.API.Contracts;
 using HouseOfHope.API.Data;
 using HouseOfHope.API.Services;
@@ -68,7 +69,9 @@ public class ResidentsController : ControllerBase
             SafehouseId = safehouseId.Value,
             CaseStatus = request.CaseStatus,
             CaseCategory = request.CaseCategory,
-            CurrentRiskLevel = request.RiskLevel,
+            CurrentRiskLevel = HouseOfHopeMapper.NormalizeRiskLevel(request.RiskLevel),
+            InitialRiskLevel = HouseOfHopeMapper.NormalizeRiskLevel(request.InitialRiskLevel)
+                ?? HouseOfHopeMapper.NormalizeRiskLevel(request.RiskLevel),
             AssignedSocialWorker = request.AssignedSocialWorker,
             ReintegrationStatus = request.ReintegrationStatus,
             ReintegrationType = request.ReintegrationType,
@@ -125,7 +128,9 @@ public class ResidentsController : ControllerBase
         entity.SafehouseId = safehouseId.Value;
         entity.CaseStatus = request.CaseStatus;
         entity.CaseCategory = request.CaseCategory;
-        entity.CurrentRiskLevel = request.RiskLevel;
+        entity.CurrentRiskLevel = HouseOfHopeMapper.NormalizeRiskLevel(request.RiskLevel);
+        if (request.InitialRiskLevel != null)
+            entity.InitialRiskLevel = HouseOfHopeMapper.NormalizeRiskLevel(request.InitialRiskLevel);
         entity.AssignedSocialWorker = request.AssignedSocialWorker;
         entity.ReintegrationStatus = request.ReintegrationStatus;
         entity.ReintegrationType = request.ReintegrationType;
@@ -274,23 +279,59 @@ public class ResidentsController : ControllerBase
         }).ToList();
     }
 
+    /// <param name="futureOnly">When true, only conferences on or after today (UTC), for admin dashboard. When false (default), recent dates for Field ops (upcoming vs past split on the client).</param>
     [HttpGet("case-conferences")]
-    public async Task<ActionResult<List<UpcomingConferenceDto>>> GetCaseConferences(CancellationToken ct)
+    public async Task<ActionResult<List<UpcomingConferenceDto>>> GetCaseConferences(
+        [FromQuery] bool futureOnly = false,
+        CancellationToken ct = default)
     {
-        var rows = await (
+        if (!futureOnly)
+        {
+            return await (
+                from p in _db.InterventionPlans.AsNoTracking()
+                join r in _db.Residents.AsNoTracking() on p.ResidentId equals r.ResidentId
+                where p.CaseConferenceDate != null && p.CaseConferenceDate != ""
+                orderby p.CaseConferenceDate descending
+                select new UpcomingConferenceDto
+                {
+                    Id = p.PlanId.ToString(),
+                    ResidentCode = r.InternalCode ?? "",
+                    Date = p.CaseConferenceDate ?? "",
+                    Type = p.PlanCategory ?? "Case Conference"
+                }).Take(300).ToListAsync(ct);
+        }
+
+        var raw = await (
             from p in _db.InterventionPlans.AsNoTracking()
             join r in _db.Residents.AsNoTracking() on p.ResidentId equals r.ResidentId
             where p.CaseConferenceDate != null && p.CaseConferenceDate != ""
-            orderby p.CaseConferenceDate descending
             select new UpcomingConferenceDto
             {
                 Id = p.PlanId.ToString(),
                 ResidentCode = r.InternalCode ?? "",
                 Date = p.CaseConferenceDate ?? "",
                 Type = p.PlanCategory ?? "Case Conference"
-            }).Take(300).ToListAsync(ct);
+            }).ToListAsync(ct);
 
-        return rows;
+        var today = DateTime.UtcNow.Date;
+        return raw
+            .Select(x => (x, dt: ParseConferenceDate(x.Date)))
+            .Where(t => t.dt.HasValue && t.dt.Value >= today)
+            .OrderBy(t => t.dt)
+            .ThenBy(t => t.x.ResidentCode)
+            .Take(25)
+            .Select(t => t.x)
+            .ToList();
+    }
+
+    private static DateTime? ParseConferenceDate(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var u))
+            return u.Date;
+        if (DateTime.TryParse(s, CultureInfo.CurrentCulture, DateTimeStyles.None, out var l))
+            return l.Date;
+        return null;
     }
 
     [HttpGet("{id:int}/sessions")]
@@ -635,6 +676,8 @@ public class UpsertResidentRequest
     public string? CaseStatus { get; set; }
     public string? CaseCategory { get; set; }
     public string? RiskLevel { get; set; }
+    /// <summary>Intake risk; defaults to current risk on create if omitted.</summary>
+    public string? InitialRiskLevel { get; set; }
     public string? AssignedSocialWorker { get; set; }
     public string? ReintegrationStatus { get; set; }
     public string? ReintegrationType { get; set; }
