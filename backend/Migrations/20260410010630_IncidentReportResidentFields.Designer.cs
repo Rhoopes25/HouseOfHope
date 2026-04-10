@@ -2,6 +2,7 @@
 using HouseOfHope.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -9,9 +10,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HouseOfHope.API.Migrations
 {
     [DbContext(typeof(LighthouseDbContext))]
-    partial class LighthouseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260410010630_IncidentReportResidentFields")]
+    partial class IncidentReportResidentFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
@@ -393,6 +396,10 @@ namespace HouseOfHope.API.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("initial_case_assessment");
 
+                    b.Property<string>("InitialRiskLevel")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("initial_risk_level");
+
                     b.Property<string>("InternalCode")
                         .HasColumnType("TEXT")
                         .HasColumnName("internal_code");
@@ -486,6 +493,60 @@ namespace HouseOfHope.API.Migrations
                     b.HasKey("SafehouseId");
 
                     b.ToTable("safehouses", (string)null);
+                });
+
+            modelBuilder.Entity("HouseOfHope.API.Data.SafehouseMonthlyMetric", b =>
+                {
+                    b.Property<int>("MetricId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("metric_id");
+
+                    b.Property<int?>("ActiveResidents")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("active_residents");
+
+                    b.Property<double?>("AvgEducationProgress")
+                        .HasColumnType("REAL")
+                        .HasColumnName("avg_education_progress");
+
+                    b.Property<double?>("AvgHealthScore")
+                        .HasColumnType("REAL")
+                        .HasColumnName("avg_health_score");
+
+                    b.Property<int?>("HomeVisitationCount")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("home_visitation_count");
+
+                    b.Property<int?>("IncidentCount")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("incident_count");
+
+                    b.Property<string>("MonthEnd")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("month_end");
+
+                    b.Property<string>("MonthStart")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("month_start");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("notes");
+
+                    b.Property<int?>("ProcessRecordingCount")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("process_recording_count");
+
+                    b.Property<int>("SafehouseId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("safehouse_id");
+
+                    b.HasKey("MetricId");
+
+                    b.HasIndex("SafehouseId");
+
+                    b.ToTable("safehouse_monthly_metrics", (string)null);
                 });
 
             modelBuilder.Entity("HouseOfHope.API.Data.SocialMediaPost", b =>
@@ -605,6 +666,17 @@ namespace HouseOfHope.API.Migrations
                 });
 
             modelBuilder.Entity("HouseOfHope.API.Data.Resident", b =>
+                {
+                    b.HasOne("HouseOfHope.API.Data.Safehouse", "Safehouse")
+                        .WithMany()
+                        .HasForeignKey("SafehouseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Safehouse");
+                });
+
+            modelBuilder.Entity("HouseOfHope.API.Data.SafehouseMonthlyMetric", b =>
                 {
                     b.HasOne("HouseOfHope.API.Data.Safehouse", "Safehouse")
                         .WithMany()

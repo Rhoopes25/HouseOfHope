@@ -1,0 +1,38 @@
+{
+  "riskDecisionThreshold": 0.5,
+  "reintegrationDecisionThreshold": 0.4,
+  "riskTierHigh": 0.65,
+  "riskTierMedium": 0.35,
+  "caseloadElevatedRisk": 0.45,
+  "caseloadElevatedNlp": 0.5,
+  "nlpDistressThreshold": 0.25,
+  "featureNames": [
+    "time_in_program_days",
+    "initial_risk_num",
+    "is_case_closed_by_T",
+    "pr_n_sessions_to_date",
+    "pr_concern_rate_to_date",
+    "hv_n_visits_to_date",
+    "hv_unfavorable_rate_to_date",
+    "ip_n_interventions_to_date",
+    "ip_completion_rate_to_date",
+    "inc_n_incidents_to_date",
+    "inc_n_high_critical_to_date",
+    "inc_unresolved_rate_to_date",
+    "inc_incidents_last_30d",
+    "edu_trend_slope",
+    "health_trend_slope"
+  ],
+  "nlpLexicalNames": [
+    "nlp_lex_0",
+    "nlp_lex_1",
+    "nlp_lex_2",
+    "nlp_lex_3",
+    "nlp_lex_4",
+    "nlp_lex_5",
+    "nlp_lex_6",
+    "nlp_lex_7",
+    "nlp_lex_8",
+    "nlp_lex_9"
+  ]
+}

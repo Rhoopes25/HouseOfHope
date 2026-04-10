@@ -517,6 +517,23 @@ export default function ResidentDetail() {
                         {Math.round((resident.casePrediction.reintegrationSuccessProbability ?? 0) * 100)}%
                       </span>
                     </p>
+                    {resident.casePrediction.caseloadPriorityLabel ? (
+                      <p>
+                        Caseload priority:{' '}
+                        <span className="font-medium">{resident.casePrediction.caseloadPriorityLabel}</span>
+                      </p>
+                    ) : null}
+                    {resident.casePrediction.nlpDistressProbability != null ? (
+                      <p>
+                        Session text distress (NLP):{' '}
+                        <span className="font-semibold">
+                          {Math.round((resident.casePrediction.nlpDistressProbability ?? 0) * 100)}%
+                        </span>
+                        {resident.casePrediction.nlpDistressFlag ? (
+                          <span className="ml-2 text-amber-700 text-xs font-medium">Flagged</span>
+                        ) : null}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-muted-foreground">
                       Model {resident.casePrediction.modelVersion} · scored {new Date(resident.casePrediction.scoredAtUtc).toLocaleString()}
                     </p>

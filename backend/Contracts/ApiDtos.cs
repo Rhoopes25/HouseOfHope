@@ -41,6 +41,9 @@ public class CaseManagementPredictionDto
     public double ReintegrationSuccessProbability { get; set; }
     public bool ReintegrationLikelyWithin90d { get; set; }
     public List<string> RecommendedActions { get; set; } = [];
+    public string CaseloadPriorityLabel { get; set; } = "";
+    public double NlpDistressProbability { get; set; }
+    public bool NlpDistressFlag { get; set; }
 }
 
 public class CounselingSessionDto

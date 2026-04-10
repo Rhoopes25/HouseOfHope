@@ -275,8 +275,19 @@ public class IncidentReport
 {
     [Key, Column("incident_id")]
     public int IncidentId { get; set; }
+    [Column("resident_id")]
+    public int ResidentId { get; set; }
+    [Column("safehouse_id")]
+    public int? SafehouseId { get; set; }
+    [Column("incident_date")]
+    public string? IncidentDate { get; set; }
     [Column("incident_type")]
     public string? IncidentType { get; set; }
     [Column("severity")]
     public string? Severity { get; set; }
+    [Column("resolution_date")]
+    public string? ResolutionDate { get; set; }
+    /// <summary>CSV boolean: 1 = resolved.</summary>
+    [Column("resolved")]
+    public int Resolved { get; set; }
 }

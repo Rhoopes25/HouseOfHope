@@ -457,7 +457,12 @@ export default function CaseloadInventory() {
                         <TableCell className="text-sm">{formatCaseCategoryLabel(r.caseCategory)}</TableCell>
                         <TableCell><RiskBadge level={r.riskLevel} /></TableCell>
                         <TableCell className="text-sm capitalize">
-                          {r.casePrediction?.riskEscalationTier ?? 'unknown'}
+                          <div>{r.casePrediction?.riskEscalationTier ?? 'unknown'}</div>
+                          {r.casePrediction?.caseloadPriorityLabel ? (
+                            <div className="text-[10px] text-muted-foreground leading-tight mt-0.5 max-w-[10rem]">
+                              {r.casePrediction.caseloadPriorityLabel}
+                            </div>
+                          ) : null}
                         </TableCell>
                         <TableCell className="text-sm">
                           {r.casePrediction?.modelAvailable
@@ -520,6 +525,16 @@ export default function CaseloadInventory() {
                           ? `${Math.round((r.casePrediction.riskEscalationProbability ?? 0) * 100)}%`
                           : 'Unavailable'}
                       </p>
+                      {r.casePrediction?.caseloadPriorityLabel ? (
+                        <p><span className="font-medium">Caseload:</span> {r.casePrediction.caseloadPriorityLabel}</p>
+                      ) : null}
+                      {r.casePrediction?.nlpDistressProbability != null ? (
+                        <p>
+                          <span className="font-medium">NLP distress:</span>{' '}
+                          {Math.round((r.casePrediction.nlpDistressProbability ?? 0) * 100)}%
+                          {r.casePrediction.nlpDistressFlag ? ' · flagged' : ''}
+                        </p>
+                      ) : null}
                       <p><span className="font-medium">Reintegration:</span> {r.reintegrationStatus}</p>
                     </div>
                   </div>

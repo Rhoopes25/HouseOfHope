@@ -17,12 +17,17 @@ public sealed class CaseManagementPredictionResult
     public double ReintegrationSuccessProbability { get; set; }
     public bool ReintegrationLikelyWithin90d { get; set; }
     public List<string> RecommendedActions { get; set; } = [];
+    public string CaseloadPriorityLabel { get; set; } = "";
+    public double NlpDistressProbability { get; set; }
+    public bool NlpDistressFlag { get; set; }
 }
 
 public sealed class CaseManagementPredictionService : IDisposable
 {
     private readonly LighthouseDbContext _db;
     private readonly ILogger<CaseManagementPredictionService> _logger;
+    private readonly NlpDistressPredictionService _nlp;
+    private readonly CaseManagementThresholds _thr;
     private readonly InferenceSession? _riskSession;
     private readonly InferenceSession? _reintegrationSession;
     private readonly bool _modelsAvailable;
@@ -30,9 +35,6 @@ public sealed class CaseManagementPredictionService : IDisposable
 
     private const string RiskModelName = "case_risk_escalation.onnx";
     private const string ReintegrationModelName = "case_reintegration_success.onnx";
-    private const double RiskDecisionThreshold = 0.50;
-    private const double ReintegrationDecisionThreshold = 0.40;
-
     private static readonly string[] FeatureNames =
     [
         "time_in_program_days",
@@ -55,10 +57,14 @@ public sealed class CaseManagementPredictionService : IDisposable
     public CaseManagementPredictionService(
         LighthouseDbContext db,
         IWebHostEnvironment env,
-        ILogger<CaseManagementPredictionService> logger)
+        ILogger<CaseManagementPredictionService> logger,
+        NlpDistressPredictionService nlp,
+        CaseManagementThresholds thr)
     {
         _db = db;
         _logger = logger;
+        _nlp = nlp;
+        _thr = thr;
 
         try
         {
@@ -110,12 +116,14 @@ public sealed class CaseManagementPredictionService : IDisposable
         var planRows = await _db.InterventionPlans.AsNoTracking().Where(x => ids.Contains(x.ResidentId)).ToListAsync(ct);
         var eduRows = await _db.EducationRecords.AsNoTracking().Where(x => ids.Contains(x.ResidentId)).ToListAsync(ct);
         var healthRows = await _db.HealthWellbeingRecords.AsNoTracking().Where(x => ids.Contains(x.ResidentId)).ToListAsync(ct);
+        var incidentRows = await _db.IncidentReports.AsNoTracking().Where(x => ids.Contains(x.ResidentId)).ToListAsync(ct);
 
         var outMap = new Dictionary<int, CaseManagementPredictionResult>(ids.Count);
         foreach (var resident in list)
         {
-            var features = BuildFeatureVector(resident, processRows, visitRows, planRows, eduRows, healthRows);
-            var score = Score(features);
+            var resIncidents = incidentRows.Where(x => x.ResidentId == resident.ResidentId).ToList();
+            var features = BuildFeatureVector(resident, processRows, visitRows, planRows, eduRows, healthRows, resIncidents);
+            var score = Score(resident.ResidentId, features, processRows);
             outMap[resident.ResidentId] = score;
         }
 
@@ -148,7 +156,8 @@ public sealed class CaseManagementPredictionService : IDisposable
         List<HomeVisitation> visitRows,
         List<InterventionPlan> planRows,
         List<EducationRecord> eduRows,
-        List<HealthWellbeingRecord> healthRows)
+        List<HealthWellbeingRecord> healthRows,
+        List<IncidentReport> incidentRows)
     {
         var residentProcess = processRows.Where(x => x.ResidentId == resident.ResidentId).ToList();
         var residentVisits = visitRows.Where(x => x.ResidentId == resident.ResidentId).ToList();
@@ -173,11 +182,22 @@ public sealed class CaseManagementPredictionService : IDisposable
             ? 0f
             : residentPlans.Count(x => IsCompletedStatus(x.Status)) / (float)ipCount;
 
-        // Incident-level resident columns are not currently exposed in this schema.
-        var incidentCount = 0f;
-        var highCriticalCount = 0f;
-        var unresolvedRate = 0f;
-        var incidentsLast30d = 0f;
+        var residentIncidents = incidentRows.Where(x => x.ResidentId == resident.ResidentId).ToList();
+        var incidentCount = (float)residentIncidents.Count;
+        var highCriticalCount = (float)residentIncidents.Count(x =>
+            string.Equals(x.Severity?.Trim(), "High", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.Severity?.Trim(), "Critical", StringComparison.OrdinalIgnoreCase));
+        var unresolvedRate = incidentCount == 0
+            ? 0f
+            : residentIncidents.Count(x => string.IsNullOrWhiteSpace(x.ResolutionDate)) / incidentCount;
+        var now = DateTime.UtcNow.Date;
+        var windowStart = now.AddDays(-30);
+        var incidentsLast30d = (float)residentIncidents.Count(x =>
+        {
+            var d = TryParseDate(x.IncidentDate);
+            if (!d.HasValue) return false;
+            return d.Value.Date > windowStart && d.Value.Date <= now;
+        });
 
         var eduSlope = ComputeSlope(
             residentEdu
@@ -211,51 +231,87 @@ public sealed class CaseManagementPredictionService : IDisposable
         ];
     }
 
-    private CaseManagementPredictionResult Score(float[] features)
+    private CaseManagementPredictionResult Score(int residentId, float[] features, List<ProcessRecording> allSessions)
     {
         if (!_modelsAvailable || _riskSession == null || _reintegrationSession == null)
             return BuildUnavailableResult();
 
-        var riskInputs = CreateInputs(features);
-        using var riskOutputs = _riskSession.Run(riskInputs.Values);
-        var riskProb = ClampProbability(riskOutputs.First().AsEnumerable<float>().FirstOrDefault());
+        float riskProbRaw;
+        float reintegrationProbRaw;
+        try
+        {
+            var riskInputs = CreateInputs(features);
+            using var riskOutputs = _riskSession.Run(riskInputs.Values);
+            riskProbRaw = SklearnOnnxOutputs.ExtractBinaryPositiveClassProbability(riskOutputs);
 
-        var reintegrationInputs = CreateInputs(features);
-        using var reintegrationOutputs = _reintegrationSession.Run(reintegrationInputs.Values);
-        var reintegrationProb = ClampProbability(reintegrationOutputs.First().AsEnumerable<float>().FirstOrDefault());
+            var reintegrationInputs = CreateInputs(features);
+            using var reintegrationOutputs = _reintegrationSession.Run(reintegrationInputs.Values);
+            reintegrationProbRaw = SklearnOnnxOutputs.ExtractBinaryPositiveClassProbability(reintegrationOutputs);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Case ONNX scoring failed for resident {ResidentId}.", residentId);
+            return BuildUnavailableResult();
+        }
+
+        var riskProb = ClampProbability(riskProbRaw);
+        var reintegrationProb = ClampProbability(reintegrationProbRaw);
+
+        var narrative = string.Join(
+            "\n",
+            allSessions
+                .Where(x => x.ResidentId == residentId)
+                .OrderByDescending(x => x.SessionDate)
+                .Select(x => x.SessionNarrative ?? "")
+                .Where(s => !string.IsNullOrWhiteSpace(s)));
+
+        var (nlpProb, nlpFlag) = _nlp.IsAvailable
+            ? _nlp.PredictFromText(narrative, _thr.NlpDistressThreshold)
+            : (0.0, false);
 
         var now = DateTime.UtcNow;
+        var priority = BuildCaseloadPriorityLabel(riskProb, nlpProb);
         return new CaseManagementPredictionResult
         {
             ModelAvailable = true,
             ScoredAtUtc = now.ToString("O", CultureInfo.InvariantCulture),
             RiskEscalationProbability = riskProb,
-            RiskEscalationTier = ToRiskTier(riskProb),
-            RiskEscalationFlag = riskProb >= RiskDecisionThreshold,
+            RiskEscalationTier = ToRiskTier(riskProb, _thr.RiskTierHigh, _thr.RiskTierMedium),
+            RiskEscalationFlag = riskProb >= _thr.RiskDecisionThreshold,
             ReintegrationSuccessProbability = reintegrationProb,
-            ReintegrationLikelyWithin90d = reintegrationProb >= ReintegrationDecisionThreshold,
-            RecommendedActions = BuildRecommendations(riskProb, reintegrationProb)
+            ReintegrationLikelyWithin90d = reintegrationProb >= _thr.ReintegrationDecisionThreshold,
+            RecommendedActions = BuildRecommendations(riskProb, reintegrationProb),
+            CaseloadPriorityLabel = priority,
+            NlpDistressProbability = nlpProb,
+            NlpDistressFlag = nlpFlag
         };
     }
 
-    private static string ToRiskTier(double probability)
+    private string BuildCaseloadPriorityLabel(double riskProb, double nlpProb)
     {
-        if (probability >= 0.65) return "high";
-        if (probability >= 0.35) return "medium";
+        if (riskProb >= _thr.CaseloadElevatedRisk || nlpProb >= _thr.CaseloadElevatedNlp)
+            return "Elevated - Weekly supervisor review";
+        return "Routine monitoring";
+    }
+
+    private static string ToRiskTier(double probability, double high, double medium)
+    {
+        if (probability >= high) return "high";
+        if (probability >= medium) return "medium";
         return "low";
     }
 
-    private static List<string> BuildRecommendations(double riskProb, double reintegrationProb)
+    private List<string> BuildRecommendations(double riskProb, double reintegrationProb)
     {
         var recommendations = new List<string>();
-        if (riskProb >= 0.65)
+        if (riskProb >= _thr.RiskTierHigh)
             recommendations.Add("Prioritize weekly supervision and immediate case conference scheduling.");
-        else if (riskProb >= 0.35)
+        else if (riskProb >= _thr.RiskTierMedium)
             recommendations.Add("Increase check-ins and review intervention plan progress this week.");
         else
             recommendations.Add("Maintain current cadence and monitor for new concerns.");
 
-        if (reintegrationProb < 0.40)
+        if (reintegrationProb < _thr.ReintegrationDecisionThreshold)
             recommendations.Add("Strengthen reintegration supports and milestone tracking.");
         else
             recommendations.Add("Reintegration trajectory is favorable; continue current supports.");
@@ -339,7 +395,7 @@ public sealed class CaseManagementPredictionService : IDisposable
             : null;
     }
 
-    private static CaseManagementPredictionResult BuildUnavailableResult()
+    private CaseManagementPredictionResult BuildUnavailableResult()
     {
         return new CaseManagementPredictionResult
         {
@@ -350,7 +406,10 @@ public sealed class CaseManagementPredictionService : IDisposable
             RiskEscalationFlag = false,
             ReintegrationSuccessProbability = 0,
             ReintegrationLikelyWithin90d = false,
-            RecommendedActions = ["Case model is unavailable. Check ONNX model files and startup logs."]
+            RecommendedActions = ["Case model is unavailable. Check ONNX model files and startup logs."],
+            CaseloadPriorityLabel = "",
+            NlpDistressProbability = 0,
+            NlpDistressFlag = false
         };
     }
 

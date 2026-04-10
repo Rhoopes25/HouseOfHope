@@ -12,6 +12,10 @@ const string FrontendCorsPolicy = "Frontend";
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<SocialMediaPredictionService>();
+builder.Services.AddSingleton<NlpDistressPredictionService>();
+builder.Services.AddSingleton(sp => CaseManagementThresholds.LoadOrDefaults(
+    sp.GetRequiredService<IWebHostEnvironment>(),
+    sp.GetRequiredService<ILogger<CaseManagementThresholds>>()));
 builder.Services.AddScoped<CaseManagementPredictionService>();
 builder.Services.AddScoped<DonorChurnPredictionService>();
 if (builder.Environment.IsDevelopment())

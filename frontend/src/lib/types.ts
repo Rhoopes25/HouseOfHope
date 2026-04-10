@@ -20,6 +20,9 @@ export interface CaseManagementPrediction {
   reintegrationSuccessProbability: number;
   reintegrationLikelyWithin90d: boolean;
   recommendedActions: string[];
+  caseloadPriorityLabel?: string;
+  nlpDistressProbability?: number;
+  nlpDistressFlag?: boolean;
 }
 
 export interface Resident {

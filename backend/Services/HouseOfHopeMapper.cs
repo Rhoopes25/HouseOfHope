@@ -178,7 +178,10 @@ public static class HouseOfHopeMapper
                     RiskEscalationFlag = prediction.RiskEscalationFlag,
                     ReintegrationSuccessProbability = prediction.ReintegrationSuccessProbability,
                     ReintegrationLikelyWithin90d = prediction.ReintegrationLikelyWithin90d,
-                    RecommendedActions = prediction.RecommendedActions
+                    RecommendedActions = prediction.RecommendedActions,
+                    CaseloadPriorityLabel = prediction.CaseloadPriorityLabel,
+                    NlpDistressProbability = prediction.NlpDistressProbability,
+                    NlpDistressFlag = prediction.NlpDistressFlag
                 }
         };
     }
