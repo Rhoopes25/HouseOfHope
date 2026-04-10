@@ -69,11 +69,6 @@ export default function LoginPage() {
               <Link to="/register" className="text-sm text-primary hover:underline">Need an account? Register</Link>
             </div>
           </div>
-          <div className="mt-4 p-3 rounded-lg bg-muted text-xs text-muted-foreground">
-            <p className="font-medium mb-1">Demo Accounts:</p>
-            <p>Admin: admin@houseofhope.local / HouseOfHope2026</p>
-            <p>Donor: donor@houseofhope.local / HouseOfHope2026</p>
-          </div>
         </CardContent>
       </Card>
     </div>

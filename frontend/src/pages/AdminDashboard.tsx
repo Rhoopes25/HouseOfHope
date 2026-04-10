@@ -65,10 +65,15 @@ function deriveFromResidents(residents: Resident[] | undefined) {
   const safehouseSet = new Set(
     activeList.map((r) => (r.safehouse || '').trim()).filter(Boolean),
   );
+  const riskRank = (level: Resident['riskLevel']) => (level === 'critical' ? 2 : level === 'high' ? 1 : 0);
   const highRisk = list
     .filter((r) => r.riskLevel === 'high' || r.riskLevel === 'critical')
-    .sort((a, b) => a.internalCode.localeCompare(b.internalCode, undefined, { numeric: true }))
-    .slice(0, 12);
+    .sort((a, b) => {
+      const rankDiff = riskRank(b.riskLevel) - riskRank(a.riskLevel);
+      if (rankDiff !== 0) return rankDiff;
+      return a.internalCode.localeCompare(b.internalCode, undefined, { numeric: true });
+    })
+    .slice(0, 8);
   const bySafehouse = activeResidentsBySafehouse(residents);
   return {
     active,
