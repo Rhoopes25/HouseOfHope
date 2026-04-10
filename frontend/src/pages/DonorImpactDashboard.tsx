@@ -114,8 +114,8 @@ export default function DonorImpactDashboard() {
           </div>
           {periodCaption && (
             <p className="text-xs text-foreground/60 mt-2">
-              Charts show the rolling 12 months ending this month ({periodCaption}). Amounts are stored in PHP; other
-              currencies use fixed display rates for illustration.
+              Charts show the last 12 complete calendar months ({periodCaption}). The current month is omitted until it
+              closes. Amounts are stored in PHP; other currencies use fixed display rates for illustration.
             </p>
           )}
         </div>

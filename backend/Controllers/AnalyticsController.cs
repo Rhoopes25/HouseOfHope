@@ -263,31 +263,29 @@ public class AnalyticsController : ControllerBase
             .GroupBy(r => r.DateOfAdmission!.Substring(0, 7))
             .ToDictionary(g => g.Key, g => g.Count());
 
-        var allMonths = eduByMonth.Keys
-            .Union(healthByMonth.Keys)
-            .Union(donationsByMonth.Keys)
-            .Where(m => string.Compare(m, "2026-01") < 0)  // only before 2026
-            .OrderByDescending(m => m)
-            .Take(12)
-            .OrderBy(m => m)
+        // Twelve full calendar months ending at the last *complete* month (exclude the in-progress month).
+        // Example: if today is in April 2026, range is Apr 2025 … Mar 2026.
+        var now = DateTime.UtcNow;
+        var endInclusive = new DateTime(now.Year, now.Month, 1).AddMonths(-1);
+        var monthKeys = Enumerable.Range(0, 12)
+            .Select(i => endInclusive.AddMonths(-(11 - i)).ToString("yyyy-MM", CultureInfo.InvariantCulture))
             .ToList();
 
-        return allMonths.Select(month =>
+        return monthKeys.Select(month =>
         {
-            DateTime.TryParse(month + "-01", out var dt);
+            DateTime.TryParse(month + "-01", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt);
             eduByMonth.TryGetValue(month, out var edu);
             healthByMonth.TryGetValue(month, out var healthRaw);
             residentsByMonth.TryGetValue(month, out var residents);
             donationsByMonth.TryGetValue(month, out var donations);
 
-
             return new MonthlyTrendDto
             {
-                Month = dt != default ? dt.ToString("MMM yy", CultureInfo.InvariantCulture) : month,
+                Month = dt != default ? dt.ToString("MMM yyyy", CultureInfo.InvariantCulture) : month,
                 Residents = residents,
                 Education = Math.Round(Math.Min(100, edu), 1),
                 Health = HouseOfHopeMapper.HealthToPercent(healthRaw > 0 ? healthRaw : 3),
-                Donations = donations 
+                Donations = donations
             };
         }).ToList();
     }
