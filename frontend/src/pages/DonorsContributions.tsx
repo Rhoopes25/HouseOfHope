@@ -1063,7 +1063,11 @@ export default function DonorsContributions() {
         onClose={() => setDeleteDonorTarget(null)}
         onConfirm={() => deleteDonorTarget && deleteDonorMutation.mutate(deleteDonorTarget.id)}
         title="Delete donor?"
-        description={`This will remove ${deleteDonorTarget?.displayName ?? 'this donor'}.`}
+        description={`This will remove ${deleteDonorTarget?.displayName ?? 'this donor'}.${
+          deleteDonorTarget?.hasLinkedLogin
+            ? ' Their donor portal access will also be revoked.'
+            : ''
+        }`}
       />
       <ConfirmDeleteDialog
         open={!!deleteDonationTarget}

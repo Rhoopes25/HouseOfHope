@@ -24,8 +24,12 @@ namespace RootkitAuth.API.Data
             }
         
             var adminSection = configuration.GetSection("GenerateDefaultIdentityAdmin");
-            var adminEmail = adminSection["Email"] ?? "admin@rootkit.local";
-            var adminPassword = adminSection["Password"] ?? "Rootkit2026!Admin";
+            var adminEmail = adminSection["Email"];
+            var adminPassword = adminSection["Password"];
+            if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+            {
+                return;
+            }
 
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
             if (adminUser == null)

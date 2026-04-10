@@ -4,6 +4,8 @@ namespace HouseOfHope.API.Data;
 
 public static class AuthIdentityGenerator
 {
+    private sealed record SeedUserConfig(string Email, string Password, string? DisplayName = null);
+
     public static async Task GenerateDefaultIdentityAsync(IServiceProvider serviceProvider, IConfiguration configuration)
     {
         var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -21,22 +23,41 @@ public static class AuthIdentityGenerator
             }
         }
 
-        var adminSection = configuration.GetSection("GenerateDefaultIdentityAdmin");
-        var adminEmail = adminSection["Email"] ?? "admin@houseofhope.local";
-        var adminPassword = adminSection["Password"] ?? "HouseOfHope2026";
-        await EnsureUserWithRoleAsync(userManager, adminEmail, adminPassword, AuthRoles.Admin);
-
-        var donorSection = configuration.GetSection("GenerateDefaultIdentityDonor");
-        var donorEmail = donorSection["Email"] ?? "donor@houseofhope.local";
-        var donorPassword = donorSection["Password"] ?? "HouseOfHope2026";
-        var donorDisplayName = donorSection["DisplayName"] ?? "Mila Alvarez";
-        var donorUser = await EnsureUserWithRoleAsync(userManager, donorEmail, donorPassword, AuthRoles.Donor);
-
-        var currentClaims = await userManager.GetClaimsAsync(donorUser);
-        if (currentClaims.All(c => c.Type != "supporter_display_name"))
+        var admin = GetSeedUserConfig(configuration, "GenerateDefaultIdentityAdmin");
+        if (admin is not null)
         {
-            await userManager.AddClaimAsync(donorUser, new System.Security.Claims.Claim("supporter_display_name", donorDisplayName));
+            await EnsureUserWithRoleAsync(userManager, admin.Email, admin.Password, AuthRoles.Admin);
         }
+
+        var donor = GetSeedUserConfig(configuration, "GenerateDefaultIdentityDonor");
+        if (donor is not null)
+        {
+            var donorUser = await EnsureUserWithRoleAsync(userManager, donor.Email, donor.Password, AuthRoles.Donor);
+            if (!string.IsNullOrWhiteSpace(donor.DisplayName))
+            {
+                var currentClaims = await userManager.GetClaimsAsync(donorUser);
+                if (currentClaims.All(c => c.Type != "supporter_display_name"))
+                {
+                    await userManager.AddClaimAsync(
+                        donorUser,
+                        new System.Security.Claims.Claim("supporter_display_name", donor.DisplayName));
+                }
+            }
+        }
+    }
+
+    private static SeedUserConfig? GetSeedUserConfig(IConfiguration configuration, string sectionName)
+    {
+        var section = configuration.GetSection(sectionName);
+        var email = section["Email"];
+        var password = section["Password"];
+        var displayName = section["DisplayName"];
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            return null;
+        }
+
+        return new SeedUserConfig(email, password, displayName);
     }
 
     private static async Task<ApplicationUser> EnsureUserWithRoleAsync(
