@@ -177,29 +177,9 @@ namespace HouseOfHope.API.Migrations
                         .HasColumnType("INTEGER")
                         .HasColumnName("incident_id");
 
-                    b.Property<string>("IncidentDate")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("incident_date");
-
                     b.Property<string>("IncidentType")
                         .HasColumnType("TEXT")
                         .HasColumnName("incident_type");
-
-                    b.Property<int>("ResidentId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("resident_id");
-
-                    b.Property<string>("ResolutionDate")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("resolution_date");
-
-                    b.Property<int>("Resolved")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("resolved");
-
-                    b.Property<int?>("SafehouseId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("safehouse_id");
 
                     b.Property<string>("Severity")
                         .HasColumnType("TEXT")

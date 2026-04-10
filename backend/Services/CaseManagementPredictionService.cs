@@ -116,13 +116,12 @@ public sealed class CaseManagementPredictionService : IDisposable
         var planRows = await _db.InterventionPlans.AsNoTracking().Where(x => ids.Contains(x.ResidentId)).ToListAsync(ct);
         var eduRows = await _db.EducationRecords.AsNoTracking().Where(x => ids.Contains(x.ResidentId)).ToListAsync(ct);
         var healthRows = await _db.HealthWellbeingRecords.AsNoTracking().Where(x => ids.Contains(x.ResidentId)).ToListAsync(ct);
-        var incidentRows = await _db.IncidentReports.AsNoTracking().Where(x => ids.Contains(x.ResidentId)).ToListAsync(ct);
 
         var outMap = new Dictionary<int, CaseManagementPredictionResult>(ids.Count);
         foreach (var resident in list)
         {
-            var resIncidents = incidentRows.Where(x => x.ResidentId == resident.ResidentId).ToList();
-            var features = BuildFeatureVector(resident, processRows, visitRows, planRows, eduRows, healthRows, resIncidents);
+            // incident_reports has no resident link (InitialCreate); incident features use zeros.
+            var features = BuildFeatureVector(resident, processRows, visitRows, planRows, eduRows, healthRows, []);
             var score = Score(resident.ResidentId, features, processRows);
             outMap[resident.ResidentId] = score;
         }
@@ -182,22 +181,14 @@ public sealed class CaseManagementPredictionService : IDisposable
             ? 0f
             : residentPlans.Count(x => IsCompletedStatus(x.Status)) / (float)ipCount;
 
-        var residentIncidents = incidentRows.Where(x => x.ResidentId == resident.ResidentId).ToList();
+        var residentIncidents = incidentRows;
         var incidentCount = (float)residentIncidents.Count;
         var highCriticalCount = (float)residentIncidents.Count(x =>
             string.Equals(x.Severity?.Trim(), "High", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(x.Severity?.Trim(), "Critical", StringComparison.OrdinalIgnoreCase));
-        var unresolvedRate = incidentCount == 0
-            ? 0f
-            : residentIncidents.Count(x => string.IsNullOrWhiteSpace(x.ResolutionDate)) / incidentCount;
-        var now = DateTime.UtcNow.Date;
-        var windowStart = now.AddDays(-30);
-        var incidentsLast30d = (float)residentIncidents.Count(x =>
-        {
-            var d = TryParseDate(x.IncidentDate);
-            if (!d.HasValue) return false;
-            return d.Value.Date > windowStart && d.Value.Date <= now;
-        });
+        // incident_reports has no resident/resolution/date columns in DB; caller passes [] for ONNX features.
+        var unresolvedRate = 0f;
+        var incidentsLast30d = 0f;
 
         var eduSlope = ComputeSlope(
             residentEdu
